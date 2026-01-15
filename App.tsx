@@ -496,9 +496,18 @@ const App: React.FC = () => {
                       </div>
                     </div>
                     
-                    <button onClick={saveRecord} className="w-full bg-[#D40000] py-12 mono text-base font-black tracking-[0.6em] hover:bg-[#B30000] transition-all uppercase shadow-[0_30px_60px_rgba(212,0,0,0.4)] active:scale-[0.98] flex items-center justify-center gap-8">
-                      COMMIT_TO_JOURNAL <ArrowRight size={28}/>
-                    </button>
+                    {/* 保存按钮 - 更突出更明确 */}
+                    <div className="space-y-4 pt-8 border-t border-white/10">
+                      <button onClick={saveRecord} className="w-full bg-[#D40000] py-6 hover:bg-[#B30000] transition-all shadow-[0_20px_50px_rgba(212,0,0,0.5)] active:scale-[0.98] rounded-sm group">
+                        <div className="flex flex-col items-center gap-2">
+                          <div className="flex items-center gap-3">
+                            <Check size={24} strokeWidth={3} className="group-hover:scale-110 transition-transform"/>
+                            <span className="text-xl font-bold">保存到成长档案</span>
+                          </div>
+                          <span className="text-xs text-white/60 font-normal">记录这次拍摄，追踪你的进步轨迹</span>
+                        </div>
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
