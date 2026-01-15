@@ -196,7 +196,7 @@ const App: React.FC = () => {
 
   const copyIns = () => {
     if (!currentResult) return;
-    const text = `${currentResult.analysis.instagramCaption}\n\n${currentResult.analysis.instagramHashtags?.join(' ')}`;
+    const text = `${currentResult.analysis.instagramCaption}\n\n${currentResult.analysis.instagramHashtags?.map(tag => tag.startsWith('#') ? tag : `#${tag}`).join(' ')}`;
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -397,7 +397,7 @@ const App: React.FC = () => {
                             <p className="text-sm text-zinc-300 italic font-light leading-relaxed">"{currentResult.analysis.instagramCaption}"</p>
                             <div className="flex flex-wrap gap-2 pt-2">
                               {currentResult.analysis.instagramHashtags?.map(tag => (
-                                <span key={tag} className="text-xs text-[#D40000] mono font-medium">{tag}</span>
+                                <span key={tag} className="text-xs text-[#D40000] mono font-medium">{tag.startsWith('#') ? tag : `#${tag}`}</span>
                               ))}
                             </div>
                           </div>
@@ -470,26 +470,29 @@ const App: React.FC = () => {
                       <ScoreMeter score={currentResult.scores.overall} label="综合评分" color="#fff" />
                     </div>
 
-                    <div className="space-y-20 pt-10 border-t border-white/10">
-                      <div className="space-y-10">
-                        <div className="flex items-center gap-3 text-[#D40000] mono text-xs font-bold uppercase tracking-widest"><MessageSquare size={20}/> Professional Diagnosis</div>
-                        <div className="space-y-6">
+                    <div className="space-y-16 pt-10 border-t border-white/10">
+                      {/* Diagnosis - 缩小字体 */}
+                      <div className="space-y-6">
+                        <div className="flex items-center gap-3 text-[#D40000] mono text-xs font-bold uppercase tracking-widest"><MessageSquare size={18}/> 专业诊断</div>
+                        <div className="space-y-4">
                           {currentResult.analysis.diagnosis.split('\n').map((para, i) => (
-                            <p key={i} className={`text-2xl text-zinc-50 leading-snug font-medium font-serif ${i > 0 ? 'border-t border-white/5 pt-6 text-zinc-400 text-xl' : ''}`}>
+                            <p key={i} className={`text-base text-zinc-200 leading-relaxed ${i > 0 ? 'text-zinc-400' : ''}`}>
                               {para}
                             </p>
                           ))}
                         </div>
                       </div>
-                      
-                      <div className="space-y-10">
-                        <div className="flex items-center gap-3 text-zinc-600 mono text-xs font-bold uppercase tracking-widest"><ImageIcon size={20}/> Story & Intent</div>
-                        <p className="text-xl text-zinc-400 italic leading-relaxed border-l-4 border-[#D40000] pl-10 bg-white/[0.01] py-10 rounded-r-sm">"{currentResult.analysis.storyNote}"</p>
+
+                      {/* Evolution Strategy - 更突出 */}
+                      <div className="p-8 bg-[#D40000]/10 border border-[#D40000]/20 rounded-sm space-y-4">
+                         <span className="mono text-sm text-[#D40000] font-bold tracking-[0.2em] block uppercase flex items-center gap-2"><Lightbulb size={16}/> 进化策略</span>
+                         <p className="text-lg text-zinc-100 leading-relaxed">{currentResult.analysis.improvement}</p>
                       </div>
-                      
-                      <div className="p-12 bg-zinc-900/40 border border-white/5 rounded-sm space-y-8 shadow-inner">
-                         <span className="mono text-sm text-[#D40000] font-bold tracking-[0.2em] block uppercase">Evolution Strategy</span>
-                         <p className="text-base text-zinc-300 leading-relaxed font-light">{currentResult.analysis.improvement}</p>
+
+                      {/* Story & Intent - 缩小保留 */}
+                      <div className="space-y-3 opacity-70">
+                        <div className="flex items-center gap-2 text-zinc-600 mono text-[10px] font-bold uppercase tracking-widest"><ImageIcon size={14}/> Story</div>
+                        <p className="text-sm text-zinc-500 italic leading-relaxed pl-4 border-l-2 border-zinc-800">"{currentResult.analysis.storyNote}"</p>
                       </div>
                     </div>
                     
