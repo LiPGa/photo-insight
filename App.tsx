@@ -1,9 +1,9 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { 
-  Plus, 
-  X, 
-  Zap, 
+import {
+  Plus,
+  X,
+  Zap,
   Activity,
   ChevronRight,
   ArrowLeft,
@@ -24,8 +24,11 @@ import {
   Cpu,
   ArrowRight,
   AlertCircle,
-  Lightbulb
+  Lightbulb,
+  Download,
+  Sparkles
 } from 'lucide-react';
+import html2canvas from 'html2canvas';
 import exifr from 'exifr';
 import { NavTab, PhotoEntry, DetailedScores, DetailedAnalysis } from './types';
 import { analyzePhoto } from './services/geminiService';
@@ -116,6 +119,9 @@ const App: React.FC = () => {
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dailyUsage, setDailyUsage] = useState({ count: 0, date: '' });
+  const [showShareCard, setShowShareCard] = useState(false);
+  const [isGeneratingCard, setIsGeneratingCard] = useState(false);
+  const shareCardRef = useRef<HTMLDivElement>(null);
 
   // 加载每日使用次数
   useEffect(() => {
@@ -266,6 +272,28 @@ const App: React.FC = () => {
     setSelectedTitle('');
     setActiveTags([]);
     setActiveTab(NavTab.PATH);
+  };
+
+  // 生成分享卡片
+  const generateShareCard = async () => {
+    if (!shareCardRef.current) return;
+    setIsGeneratingCard(true);
+    try {
+      const canvas = await html2canvas(shareCardRef.current, {
+        backgroundColor: '#000',
+        scale: 2,
+        useCORS: true,
+      });
+      const link = document.createElement('a');
+      link.download = `photopath_${selectedTitle || 'insight'}_${Date.now()}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    } catch (err) {
+      console.error('生成卡片失败:', err);
+      setError('生成卡片失败，请重试');
+    } finally {
+      setIsGeneratingCard(false);
+    }
   };
 
   const ScoreMeter = ({ score, label, color = "#fff", small = false }: { score: number | undefined, label: string, color?: string, small?: boolean }) => (
@@ -559,8 +587,19 @@ const App: React.FC = () => {
                       </div>
                     </div>
                     
-                    {/* 保存按钮 - 更突出更明确 */}
+                    {/* 操作按钮 */}
                     <div className="space-y-4 pt-8 border-t border-white/10">
+                      {/* 生成分享卡片按钮 */}
+                      <button
+                        onClick={() => setShowShareCard(true)}
+                        className="w-full py-4 border border-white/10 hover:border-white/30 bg-zinc-900/50 hover:bg-zinc-900 transition-all rounded-sm group flex items-center justify-center gap-3"
+                      >
+                        <Sparkles size={18} className="text-[#D40000] group-hover:scale-110 transition-transform"/>
+                        <span className="text-sm font-medium text-zinc-300">生成点评卡片</span>
+                        <span className="text-xs text-zinc-600">可分享到社交媒体</span>
+                      </button>
+
+                      {/* 保存按钮 */}
                       <button onClick={saveRecord} className="w-full bg-[#D40000] py-6 hover:bg-[#B30000] transition-all shadow-[0_20px_50px_rgba(212,0,0,0.5)] active:scale-[0.98] rounded-sm group">
                         <div className="flex flex-col items-center gap-2">
                           <div className="flex items-center gap-3">
@@ -691,6 +730,125 @@ const App: React.FC = () => {
           </div>
         )}
       </main>
+
+      {/* 分享卡片弹窗 */}
+      {showShareCard && currentResult && currentUpload && (
+        <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 overflow-auto">
+          <div className="relative max-w-md w-full">
+            {/* 关闭按钮 */}
+            <button
+              onClick={() => setShowShareCard(false)}
+              className="absolute -top-12 right-0 text-zinc-500 hover:text-white transition-colors"
+            >
+              <X size={24} />
+            </button>
+
+            {/* 卡片内容 */}
+            <div
+              ref={shareCardRef}
+              className="bg-[#0a0a0a] rounded-lg overflow-hidden"
+              style={{ fontFamily: "'Inter', 'PingFang SC', sans-serif" }}
+            >
+              {/* 头部 */}
+              <div className="px-6 py-4 flex items-center justify-between border-b border-white/5">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 bg-[#D40000] rounded flex items-center justify-center text-[10px] font-black">AP</div>
+                  <span className="text-sm font-medium text-zinc-400">PhotoPath</span>
+                </div>
+                <span className="text-xs text-zinc-600 mono">Lens Insight</span>
+              </div>
+
+              {/* 照片 */}
+              <div className="px-4 pt-4">
+                <img
+                  src={currentUpload}
+                  className="w-full aspect-[4/3] object-cover rounded-lg"
+                  alt=""
+                  crossOrigin="anonymous"
+                />
+              </div>
+
+              {/* 标题和标签 */}
+              <div className="px-6 pt-5 pb-4 border-b border-white/5">
+                <h3 className="text-xl font-bold text-white mb-2">{selectedTitle || '未命名作品'}</h3>
+                <div className="flex flex-wrap gap-2">
+                  {activeTags.slice(0, 3).map(tag => (
+                    <span key={tag} className="text-xs text-zinc-500 bg-zinc-900 px-2 py-1 rounded">{tag}</span>
+                  ))}
+                </div>
+              </div>
+
+              {/* 评分 */}
+              <div className="px-6 py-5 space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  {[
+                    { label: '构图', score: currentResult.scores.composition },
+                    { label: '光影', score: currentResult.scores.light },
+                    { label: '叙事', score: currentResult.scores.content },
+                    { label: '表达', score: currentResult.scores.completeness },
+                  ].map(item => (
+                    <div key={item.label} className="flex items-center justify-between">
+                      <span className="text-xs text-zinc-500">{item.label}</span>
+                      <div className="flex items-center gap-2">
+                        <div className="w-16 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                          <div className="h-full bg-[#D40000] rounded-full" style={{ width: `${item.score}%` }}/>
+                        </div>
+                        <span className="text-xs font-bold text-zinc-300 w-6 text-right">{item.score}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* 综合评分 */}
+                <div className="flex items-center justify-between pt-3 border-t border-white/5">
+                  <span className="text-sm font-medium text-zinc-400">综合评分</span>
+                  <span className="text-3xl font-black text-[#D40000]">{currentResult.scores.overall}</span>
+                </div>
+              </div>
+
+              {/* 诊断摘要 */}
+              <div className="px-6 pb-5">
+                <p className="text-sm text-zinc-400 leading-relaxed line-clamp-3">
+                  {currentResult.analysis.diagnosis.split('\n')[0]}
+                </p>
+              </div>
+
+              {/* 进化策略 */}
+              <div className="mx-6 mb-5 p-4 bg-[#D40000]/10 border border-[#D40000]/20 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <Lightbulb size={14} className="text-[#D40000]"/>
+                  <span className="text-xs font-bold text-[#D40000]">进化策略</span>
+                </div>
+                <p className="text-sm text-zinc-300 leading-relaxed line-clamp-2">
+                  {currentResult.analysis.improvement}
+                </p>
+              </div>
+
+              {/* 底部 */}
+              <div className="px-6 py-4 bg-zinc-900/50 flex items-center justify-between">
+                <span className="text-[10px] text-zinc-600 mono">AI 摄影点评 · {new Date().toLocaleDateString('zh-CN')}</span>
+                <span className="text-[10px] text-zinc-600">photopath.app</span>
+              </div>
+            </div>
+
+            {/* 下载按钮 */}
+            <button
+              onClick={generateShareCard}
+              disabled={isGeneratingCard}
+              className="mt-4 w-full py-4 bg-[#D40000] hover:bg-[#B30000] disabled:bg-zinc-800 transition-all rounded-lg flex items-center justify-center gap-3"
+            >
+              {isGeneratingCard ? (
+                <span className="text-sm">生成中...</span>
+              ) : (
+                <>
+                  <Download size={18}/>
+                  <span className="text-sm font-medium">保存卡片到相册</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
