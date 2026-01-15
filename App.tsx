@@ -26,13 +26,18 @@ import {
   AlertCircle,
   Lightbulb,
   Download,
-  Sparkles
+  Sparkles,
+  User,
+  LogOut
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import exifr from 'exifr';
 import { NavTab, PhotoEntry, DetailedScores, DetailedAnalysis } from './types';
 import { analyzePhoto } from './services/geminiService';
 import { INITIAL_ENTRIES, PHOTO_TIPS } from './constants';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { AuthModal } from './components/AuthModal';
+import { savePhotoEntry, getUserPhotoEntries } from './services/dataService';
 
 const AI_THINKING_STATES = [
   { main: "正在凝视这张照片...", sub: "试图理解画面的第一印象" },
@@ -46,6 +51,40 @@ const AI_THINKING_STATES = [
 const MAX_FILE_SIZE = 15 * 1024 * 1024;
 const DAILY_LIMIT = 5;
 const STORAGE_KEY = 'photopath_daily_usage';
+const CACHE_KEY = 'photopath_image_cache';
+
+// 生成图片指纹 (取base64的一部分作为hash)
+const getImageHash = (base64: string): string => {
+  const data = base64.split(',')[1] || base64;
+  // 取前1000个字符 + 中间1000个字符 + 长度作为指纹
+  const mid = Math.floor(data.length / 2);
+  return `${data.slice(0, 500)}${data.slice(mid, mid + 500)}${data.length}`;
+};
+
+// 检查图片是否已分析过
+const checkImageCache = (hash: string): { exists: boolean; title?: string; date?: string } => {
+  try {
+    const cache = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
+    if (cache[hash]) {
+      return { exists: true, title: cache[hash].title, date: cache[hash].date };
+    }
+  } catch (e) {}
+  return { exists: false };
+};
+
+// 保存到缓存
+const saveToImageCache = (hash: string, title: string) => {
+  try {
+    const cache = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
+    cache[hash] = { title, date: new Date().toLocaleDateString('zh-CN') };
+    // 只保留最近50条记录
+    const keys = Object.keys(cache);
+    if (keys.length > 50) {
+      delete cache[keys[0]];
+    }
+    localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
+  } catch (e) {}
+};
 
 const EXIF_LABELS: Record<string, string> = {
   camera: 'CAMERA',
@@ -102,7 +141,8 @@ const UploadCoordinates: React.FC = () => (
   </div>
 );
 
-const App: React.FC = () => {
+const AppContent: React.FC = () => {
+  const { user, signOut, loading: authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState<NavTab>(NavTab.EVALUATION);
   const [entries, setEntries] = useState<PhotoEntry[]>(INITIAL_ENTRIES);
   const [currentUpload, setCurrentUpload] = useState<string | null>(null);
@@ -121,6 +161,10 @@ const App: React.FC = () => {
   const [dailyUsage, setDailyUsage] = useState({ count: 0, date: '' });
   const [showShareCard, setShowShareCard] = useState(false);
   const [isGeneratingCard, setIsGeneratingCard] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [duplicateWarning, setDuplicateWarning] = useState<{ title?: string; date?: string } | null>(null);
+  const [currentImageHash, setCurrentImageHash] = useState<string>('');
   const shareCardRef = useRef<HTMLDivElement>(null);
 
   // 加载每日使用次数
@@ -144,8 +188,22 @@ const App: React.FC = () => {
     }
   }, []);
 
+  // 登录用户加载数据
+  useEffect(() => {
+    if (user) {
+      getUserPhotoEntries(user.id).then(userEntries => {
+        if (userEntries.length > 0) {
+          setEntries(userEntries);
+        }
+      });
+    } else {
+      // 未登录时显示示例数据
+      setEntries(INITIAL_ENTRIES);
+    }
+  }, [user]);
+
   const remainingUses = DAILY_LIMIT - dailyUsage.count;
-  const isLimitReached = remainingUses <= 0;
+  const isLimitReached = !user && remainingUses <= 0; // 登录用户无限制
 
   useEffect(() => {
     let interval: any;
@@ -188,6 +246,15 @@ const App: React.FC = () => {
         setCurrentUpload(base64);
         setError(null);
         setCurrentResult(null);
+        setDuplicateWarning(null);
+
+        // 检查是否重复上传
+        const hash = getImageHash(base64);
+        setCurrentImageHash(hash);
+        const cached = checkImageCache(hash);
+        if (cached.exists) {
+          setDuplicateWarning({ title: cached.title, date: cached.date });
+        }
       };
       r.readAsDataURL(file);
 
@@ -195,6 +262,14 @@ const App: React.FC = () => {
       try {
         const exifData = await exifr.parse(file);
         if (exifData) {
+          // 提取拍摄日期
+          let captureDate = null;
+          if (exifData.DateTimeOriginal) {
+            captureDate = new Date(exifData.DateTimeOriginal);
+          } else if (exifData.CreateDate) {
+            captureDate = new Date(exifData.CreateDate);
+          }
+
           setCurrentExif({
             camera: exifData.Model || exifData.Make || "Unknown",
             aperture: exifData.FNumber ? `f/${exifData.FNumber}` : "--",
@@ -202,6 +277,7 @@ const App: React.FC = () => {
               (exifData.ExposureTime < 1 ? `1/${Math.round(1/exifData.ExposureTime)}s` : `${exifData.ExposureTime}s`) : "--",
             iso: exifData.ISO ? `ISO ${exifData.ISO}` : "--",
             focalLength: exifData.FocalLength ? `${Math.round(exifData.FocalLength)}mm` : "--",
+            captureDate: captureDate ? captureDate.toISOString() : null,
           });
         }
       } catch (e) {
@@ -224,6 +300,11 @@ const App: React.FC = () => {
       if (result.analysis.suggestedTitles?.length) setSelectedTitle(result.analysis.suggestedTitles[0]);
       if (result.analysis.suggestedTags?.length) setActiveTags(result.analysis.suggestedTags);
 
+      // 保存到图片缓存
+      if (currentImageHash) {
+        saveToImageCache(currentImageHash, result.analysis.suggestedTitles?.[0] || 'Untitled');
+      }
+
       // 更新使用次数
       const today = new Date().toDateString();
       const newUsage = { count: dailyUsage.count + 1, date: today };
@@ -245,33 +326,63 @@ const App: React.FC = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const saveRecord = () => {
-    if (!currentUpload || !currentResult) return;
+  const saveRecord = async () => {
+    if (!currentUpload || !currentResult || isSaving) return;
+
+    setIsSaving(true);
+
+    // 使用拍摄日期，如果没有则用上传日期
+    const photoDate = currentExif?.captureDate
+      ? new Date(currentExif.captureDate).toLocaleDateString('zh-CN').replace(/\//g, '.')
+      : new Date().toLocaleDateString('zh-CN').replace(/\//g, '.');
+
     const newEntry: PhotoEntry = {
       id: `SEQ_${Date.now().toString().slice(-6)}`,
       title: selectedTitle || `UNTITLED`,
       imageUrl: currentUpload,
-      date: new Date().toLocaleDateString('zh-CN').replace(/\//g, '.'),
+      date: photoDate,
       location: "STATION_ALPHA",
       notes: userNote || "No creator notes.",
       tags: activeTags,
-      params: { 
-        camera: currentExif?.camera, 
-        aperture: currentExif?.aperture, 
-        iso: currentExif?.iso, 
-        shutterSpeed: currentExif?.shutterSpeed 
+      params: {
+        camera: currentExif?.camera,
+        aperture: currentExif?.aperture,
+        iso: currentExif?.iso,
+        shutterSpeed: currentExif?.shutterSpeed
       },
       scores: currentResult.scores,
       analysis: currentResult.analysis
     };
-    setEntries([newEntry, ...entries]);
-    setCurrentUpload(null);
-    setCurrentResult(null);
-    setCurrentExif(null);
-    setUserNote('');
-    setSelectedTitle('');
-    setActiveTags([]);
-    setActiveTab(NavTab.PATH);
+
+    try {
+      // 如果用户已登录，保存到 Supabase
+      if (user) {
+        const savedEntry = await savePhotoEntry(newEntry, user.id);
+        if (savedEntry) {
+          setEntries([savedEntry, ...entries]);
+        } else {
+          // 保存失败时仍添加到本地状态
+          setEntries([newEntry, ...entries]);
+          console.warn('保存到云端失败，已保存到本地');
+        }
+      } else {
+        // 未登录用户只保存到本地状态
+        setEntries([newEntry, ...entries]);
+      }
+
+      // 短暂延迟让用户看到成功状态
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      setCurrentUpload(null);
+      setCurrentResult(null);
+      setCurrentExif(null);
+      setUserNote('');
+      setSelectedTitle('');
+      setActiveTags([]);
+      setActiveTab(NavTab.PATH);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // 生成分享卡片
@@ -311,23 +422,75 @@ const App: React.FC = () => {
       {/* Sidebar / Bottom Nav */}
       <nav className="fixed left-0 top-0 h-full w-20 border-r border-white/5 flex flex-col items-center py-10 gap-16 z-50 bg-black mobile-bottom-nav">
         <div className="w-10 h-10 bg-[#D40000] flex items-center justify-center font-black text-xs hidden sm:flex cursor-default shadow-[0_0_15px_rgba(212,0,0,0.3)]">AP</div>
-        <div className="flex flex-col sm:gap-10 items-center justify-around w-full sm:w-auto h-full sm:h-auto">
-          <button 
-            onClick={() => { setSelectedEntry(null); setActiveTab(NavTab.EVALUATION); }} 
+        <div className="flex flex-col sm:gap-10 items-center justify-around w-full sm:w-auto h-full sm:h-auto flex-grow">
+          <button
+            onClick={() => { setSelectedEntry(null); setActiveTab(NavTab.EVALUATION); }}
             className={`p-4 rounded-full transition-all ${activeTab === NavTab.EVALUATION && !selectedEntry ? 'text-white border border-white/20 bg-white/5' : 'text-zinc-700 hover:text-white'}`}
           >
             <Zap size={26} strokeWidth={1.5} />
           </button>
-          <button 
-            onClick={() => { setSelectedEntry(null); setActiveTab(NavTab.PATH); }} 
+          <button
+            onClick={() => { setSelectedEntry(null); setActiveTab(NavTab.PATH); }}
             className={`p-4 rounded-full transition-all ${activeTab === NavTab.PATH || selectedEntry ? 'text-white border border-white/20 bg-white/5' : 'text-zinc-700 hover:text-white'}`}
           >
             <Activity size={26} strokeWidth={1.5} />
           </button>
         </div>
+        {/* 用户头像/登录按钮 */}
+        <div className="hidden sm:flex flex-col items-center gap-2">
+          {user ? (
+            <div className="relative group">
+              <button className="w-10 h-10 rounded-full bg-zinc-800 border border-white/10 flex items-center justify-center overflow-hidden hover:border-[#D40000]/50 transition-colors">
+                {user.user_metadata?.avatar_url ? (
+                  <img src={user.user_metadata.avatar_url} className="w-full h-full object-cover" alt="" />
+                ) : (
+                  <User size={18} className="text-zinc-400" />
+                )}
+              </button>
+              <button
+                onClick={() => signOut()}
+                className="absolute -right-1 -bottom-1 w-5 h-5 bg-zinc-900 border border-white/10 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[#D40000] hover:border-[#D40000]"
+                title="退出登录"
+              >
+                <LogOut size={10} />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowAuthModal(true)}
+              className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center text-zinc-600 hover:text-white hover:border-[#D40000]/50 transition-all"
+              title="登录"
+            >
+              <User size={18} />
+            </button>
+          )}
+        </div>
       </nav>
 
       <main className="pl-0 sm:pl-20 min-h-screen flex flex-col main-content overflow-x-hidden">
+        {/* 右上角用户状态 */}
+        <div className="fixed top-4 right-4 z-40 flex items-center gap-3">
+          {user ? (
+            <div className="flex items-center gap-3 bg-zinc-900/80 backdrop-blur-sm border border-white/10 rounded-full pl-4 pr-2 py-1.5">
+              <span className="text-xs text-zinc-400 hidden sm:block">{user.email?.split('@')[0]}</span>
+              <button
+                onClick={() => signOut()}
+                className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-white transition-colors bg-zinc-800 hover:bg-zinc-700 px-3 py-1.5 rounded-full"
+              >
+                <LogOut size={12} />
+                <span className="hidden sm:inline">退出</span>
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowAuthModal(true)}
+              className="flex items-center gap-2 bg-zinc-900/80 backdrop-blur-sm border border-white/10 hover:border-[#D40000]/50 rounded-full px-4 py-2 text-sm text-zinc-400 hover:text-white transition-all"
+            >
+              <User size={16} />
+              <span>登录</span>
+            </button>
+          )}
+        </div>
         {activeTab === NavTab.EVALUATION && !selectedEntry && (
           <div className="flex flex-col lg:flex-row min-h-screen relative">
             {/* Left Area: Display & Technical */}
@@ -337,6 +500,17 @@ const App: React.FC = () => {
                   <div className="absolute top-10 z-30 flex items-center gap-2 bg-[#D40000] text-white px-4 py-2 rounded-sm mono text-[10px] animate-in slide-in-from-top-4">
                     <AlertCircle size={14}/> {error}
                     <button onClick={() => setError(null)} className="ml-4 hover:opacity-50"><X size={12}/></button>
+                  </div>
+                )}
+
+                {duplicateWarning && !currentResult && (
+                  <div className="absolute top-10 z-30 flex items-center gap-3 bg-amber-600 text-white px-4 py-3 rounded-sm text-sm animate-in slide-in-from-top-4">
+                    <AlertCircle size={16}/>
+                    <div>
+                      <span className="font-medium">这张照片之前分析过</span>
+                      <span className="text-white/70 ml-2">「{duplicateWarning.title}」{duplicateWarning.date}</span>
+                    </div>
+                    <button onClick={() => setDuplicateWarning(null)} className="ml-2 hover:opacity-50"><X size={14}/></button>
                   </div>
                 )}
                 
@@ -490,18 +664,25 @@ const App: React.FC = () => {
                     {/* 每日限制提示 */}
                     <div className="flex items-center justify-between p-4 bg-zinc-900/50 border border-white/5 rounded-sm">
                       <div className="flex items-center gap-2 text-zinc-500 text-sm">
-                        <Zap size={16} className={remainingUses > 0 ? 'text-[#D40000]' : 'text-zinc-700'} />
-                        <span>今日剩余</span>
+                        <Zap size={16} className={user || remainingUses > 0 ? 'text-[#D40000]' : 'text-zinc-700'} />
+                        <span>{user ? '无限次数' : '今日剩余'}</span>
                       </div>
-                      <div className="flex items-center gap-1">
-                        {[...Array(DAILY_LIMIT)].map((_, i) => (
-                          <div
-                            key={i}
-                            className={`w-2 h-2 rounded-full transition-colors ${i < remainingUses ? 'bg-[#D40000]' : 'bg-zinc-800'}`}
-                          />
-                        ))}
-                        <span className="ml-2 mono text-sm font-bold text-zinc-400">{remainingUses}/{DAILY_LIMIT}</span>
-                      </div>
+                      {user ? (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-zinc-500">已登录</span>
+                          <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1">
+                          {[...Array(DAILY_LIMIT)].map((_, i) => (
+                            <div
+                              key={i}
+                              className={`w-2 h-2 rounded-full transition-colors ${i < remainingUses ? 'bg-[#D40000]' : 'bg-zinc-800'}`}
+                            />
+                          ))}
+                          <span className="ml-2 mono text-sm font-bold text-zinc-400">{remainingUses}/{DAILY_LIMIT}</span>
+                        </div>
+                      )}
                     </div>
 
                     <button
@@ -518,7 +699,7 @@ const App: React.FC = () => {
 
                     {isLimitReached && (
                       <p className="text-center text-zinc-600 text-sm">
-                        明天再来，或 <span className="text-[#D40000] cursor-pointer hover:underline">登录</span> 解锁无限次数
+                        明天再来，或 <button onClick={() => setShowAuthModal(true)} className="text-[#D40000] hover:underline">登录</button> 解锁无限次数
                       </p>
                     )}
                   </div>
@@ -600,13 +781,30 @@ const App: React.FC = () => {
                       </button>
 
                       {/* 保存按钮 */}
-                      <button onClick={saveRecord} className="w-full bg-[#D40000] py-6 hover:bg-[#B30000] transition-all shadow-[0_20px_50px_rgba(212,0,0,0.5)] active:scale-[0.98] rounded-sm group">
+                      <button
+                        onClick={saveRecord}
+                        disabled={isSaving}
+                        className={`w-full py-6 transition-all shadow-[0_20px_50px_rgba(212,0,0,0.5)] active:scale-[0.98] rounded-sm group ${
+                          isSaving ? 'bg-green-600' : 'bg-[#D40000] hover:bg-[#B30000]'
+                        }`}
+                      >
                         <div className="flex flex-col items-center gap-2">
                           <div className="flex items-center gap-3">
-                            <Check size={24} strokeWidth={3} className="group-hover:scale-110 transition-transform"/>
-                            <span className="text-xl font-bold">保存到成长档案</span>
+                            {isSaving ? (
+                              <>
+                                <Check size={24} strokeWidth={3} className="animate-bounce"/>
+                                <span className="text-xl font-bold">保存成功！</span>
+                              </>
+                            ) : (
+                              <>
+                                <Check size={24} strokeWidth={3} className="group-hover:scale-110 transition-transform"/>
+                                <span className="text-xl font-bold">保存到成长档案</span>
+                              </>
+                            )}
                           </div>
-                          <span className="text-xs text-white/60 font-normal">记录这次拍摄，追踪你的进步轨迹</span>
+                          <span className="text-xs text-white/60 font-normal">
+                            {isSaving ? '正在跳转到档案页...' : '记录这次拍摄，追踪你的进步轨迹'}
+                          </span>
                         </div>
                       </button>
                     </div>
@@ -680,51 +878,82 @@ const App: React.FC = () => {
                 </div>
               </div>
             ) : (
-              <div className="space-y-32">
+              <div className="space-y-16">
                 <header className="border-b border-white/10 pb-16 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-16">
                   <div className="space-y-8">
-                    <h2 className="text-9xl font-black italic tracking-tighter uppercase leading-none">Archives</h2>
-                    <p className="mono text-sm text-zinc-700 tracking-[0.8em] font-bold uppercase pl-2">Evolution_Database</p>
+                    <h2 className="text-7xl sm:text-9xl font-black italic tracking-tighter uppercase leading-none">Archives</h2>
+                    <p className="mono text-sm text-zinc-700 tracking-[0.8em] font-bold uppercase pl-2">Timeline</p>
                   </div>
                   <div className="mono text-left sm:text-right w-full sm:w-auto p-8 border-l sm:border-l-0 sm:border-r border-white/10">
-                    <p className="text-xs text-zinc-800 uppercase tracking-[0.4em] mb-4 font-bold">AVG_AUDIT_SCORE</p>
-                    <p className="text-9xl font-black text-[#D40000] tracking-tighter leading-none">
+                    <p className="text-xs text-zinc-800 uppercase tracking-[0.4em] mb-4 font-bold">AVG_SCORE</p>
+                    <p className="text-7xl sm:text-9xl font-black text-[#D40000] tracking-tighter leading-none">
                       {entries.length ? (entries.reduce((a, b) => a + (b.scores.overall || 0), 0) / entries.length).toFixed(1) : '0.0'}
                     </p>
                   </div>
                 </header>
-                <div className="space-y-6">
-                  {entries.length === 0 ? (
-                    <div className="py-20 text-center mono text-zinc-800 text-xs tracking-widest uppercase">No_Data_Stored</div>
-                  ) : (
-                    entries.map(entry => (
-                      <div 
-                        key={entry.id} 
-                        onClick={() => setSelectedEntry(entry)} 
-                        className="bg-black border-y border-white/5 py-16 flex flex-col sm:flex-row items-start sm:items-center gap-16 hover:bg-[#0a0a0a] transition-all group cursor-pointer active:scale-[0.99]"
-                      >
-                        <div className="w-full sm:w-80 h-48 bg-zinc-900 border border-white/10 flex-shrink-0 overflow-hidden relative">
-                          <img src={entry.imageUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" alt="" />
-                          <div className="absolute inset-0 bg-black/50 group-hover:bg-transparent transition-colors duration-700"></div>
+
+                {entries.length === 0 ? (
+                  <div className="py-20 text-center mono text-zinc-800 text-xs tracking-widest uppercase">No_Data_Stored</div>
+                ) : (
+                  <div className="relative">
+                    {/* 时间轴线 */}
+                    <div className="absolute left-4 sm:left-8 top-0 bottom-0 w-px bg-zinc-800" />
+
+                    {/* 按月份分组 */}
+                    {Object.entries(
+                      entries.reduce((groups: Record<string, PhotoEntry[]>, entry) => {
+                        // 解析日期获取年月
+                        const dateParts = entry.date?.split('.') || [];
+                        const monthKey = dateParts.length >= 2 ? `${dateParts[0]}.${dateParts[1]}` : '未知日期';
+                        if (!groups[monthKey]) groups[monthKey] = [];
+                        groups[monthKey].push(entry);
+                        return groups;
+                      }, {})
+                    ).map(([month, monthEntries]) => (
+                      <div key={month} className="mb-16">
+                        {/* 月份标题 */}
+                        <div className="flex items-center gap-4 mb-8 pl-4 sm:pl-8">
+                          <div className="w-3 h-3 bg-[#D40000] rounded-full relative z-10 shadow-[0_0_10px_rgba(212,0,0,0.5)]" />
+                          <span className="mono text-lg font-bold text-zinc-400 tracking-wider">{month}</span>
+                          <span className="text-xs text-zinc-700">{monthEntries.length} 张</span>
                         </div>
-                        <div className="flex-grow grid grid-cols-1 sm:grid-cols-12 gap-12 items-center w-full">
-                          <div className="sm:col-span-6 space-y-6">
-                            <span className="mono text-sm font-bold text-zinc-700 uppercase group-hover:text-[#D40000] transition-colors">{entry.title || entry.id} // {entry.date}</span>
-                            <p className="text-xl text-zinc-400 truncate italic font-medium">"{entry.analysis?.diagnosis.split('\n')[0] || entry.notes}"</p>
-                          </div>
-                          <div className="sm:col-span-4 flex gap-16">
-                            <ScoreMeter score={entry.scores.composition} label="构图" small />
-                            <ScoreMeter score={entry.scores.content} label="叙事" small />
-                          </div>
-                          <div className="sm:col-span-2 text-right hidden sm:block">
-                            <span className="mono text-8xl font-black italic group-hover:text-white transition-all duration-500">{entry.scores.overall?.toFixed(1)}</span>
-                          </div>
+
+                        {/* 该月份的照片 */}
+                        <div className="pl-12 sm:pl-20 space-y-4">
+                          {monthEntries.map(entry => (
+                            <div
+                              key={entry.id}
+                              onClick={() => setSelectedEntry(entry)}
+                              className="bg-zinc-900/30 border border-white/5 rounded-lg p-4 flex gap-4 hover:bg-zinc-900/60 hover:border-white/10 transition-all group cursor-pointer"
+                            >
+                              {/* 缩略图 */}
+                              <div className="w-20 h-20 sm:w-28 sm:h-28 bg-zinc-900 rounded overflow-hidden flex-shrink-0">
+                                <img src={entry.imageUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="" />
+                              </div>
+
+                              {/* 信息 */}
+                              <div className="flex-grow min-w-0 flex flex-col justify-between py-1">
+                                <div>
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className="font-medium text-white truncate">{entry.title || 'Untitled'}</span>
+                                    <span className="text-xs text-zinc-600 mono flex-shrink-0">{entry.date?.split('.')[2] || ''}</span>
+                                  </div>
+                                  <p className="text-sm text-zinc-500 truncate">{entry.analysis?.diagnosis.split('\n')[0].slice(0, 50) || entry.notes}</p>
+                                </div>
+                                <div className="flex items-center gap-4 mt-2">
+                                  <span className="text-xs text-zinc-600">{entry.params?.camera}</span>
+                                  <span className="text-2xl font-black text-[#D40000]">{entry.scores.overall?.toFixed(1)}</span>
+                                </div>
+                              </div>
+
+                              <ChevronRight size={20} className="text-zinc-700 group-hover:text-white self-center flex-shrink-0" />
+                            </div>
+                          ))}
                         </div>
-                        <ChevronRight size={48} className="text-zinc-900 group-hover:text-white transition-all transform group-hover:translate-x-4" />
                       </div>
-                    ))
-                  )}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -733,14 +962,17 @@ const App: React.FC = () => {
 
       {/* 分享卡片弹窗 */}
       {showShareCard && currentResult && currentUpload && (
-        <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 overflow-auto">
-          <div className="relative max-w-md w-full">
+        <div
+          className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 overflow-auto"
+          onClick={() => setShowShareCard(false)}
+        >
+          <div className="relative max-w-md w-full" onClick={(e) => e.stopPropagation()}>
             {/* 关闭按钮 */}
             <button
               onClick={() => setShowShareCard(false)}
-              className="absolute -top-12 right-0 text-zinc-500 hover:text-white transition-colors"
+              className="absolute -top-10 right-0 text-zinc-400 hover:text-white transition-colors bg-zinc-800 hover:bg-zinc-700 rounded-full p-2"
             >
-              <X size={24} />
+              <X size={20} />
             </button>
 
             {/* 卡片内容 */}
@@ -777,6 +1009,19 @@ const App: React.FC = () => {
                   ))}
                 </div>
               </div>
+
+              {/* 相机参数 */}
+              {currentExif && (
+                <div className="px-6 py-3 border-b border-white/5 flex items-center gap-4 text-xs text-zinc-500">
+                  <div className="flex items-center gap-1.5">
+                    <Camera size={12} className="text-zinc-600" />
+                    <span className="text-zinc-400">{currentExif.camera}</span>
+                  </div>
+                  <span>{currentExif.aperture}</span>
+                  <span>{currentExif.shutterSpeed}</span>
+                  <span>{currentExif.iso}</span>
+                </div>
+              )}
 
               {/* 评分 */}
               <div className="px-6 py-5 space-y-4">
@@ -849,8 +1094,18 @@ const App: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* 登录弹窗 */}
+      <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
     </div>
   );
 };
+
+// 主应用组件，包裹 AuthProvider
+const App: React.FC = () => (
+  <AuthProvider>
+    <AppContent />
+  </AuthProvider>
+);
 
 export default App;
