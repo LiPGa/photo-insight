@@ -21,12 +21,26 @@ import {
   Instagram,
   Copy,
   Check,
-  Cpu
+  Cpu,
+  ArrowRight,
+  AlertCircle,
+  Lightbulb
 } from 'lucide-react';
 import EXIF from 'exif-js';
 import { NavTab, PhotoEntry, DetailedScores, DetailedAnalysis } from './types';
 import { analyzePhoto } from './services/geminiService';
 import { INITIAL_ENTRIES, PHOTO_TIPS } from './constants';
+
+const STATUS_WORDS = [
+  "AUDITING PIXELS",
+  "SCANNING METADATA",
+  "EVALUATING VISION",
+  "MAPPING INTENT",
+  "DECODING LIGHT",
+  "CALIBRATING SCORE"
+];
+
+const MAX_FILE_SIZE = 15 * 1024 * 1024;
 
 const Histogram: React.FC<{ imageUrl: string, className?: string }> = ({ imageUrl, className }) => {
   const [data, setData] = useState<number[]>([]);
@@ -38,7 +52,7 @@ const Histogram: React.FC<{ imageUrl: string, className?: string }> = ({ imageUr
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
-      const size = 120; // Increased sample size slightly
+      const size = 128;
       canvas.width = size; canvas.height = size;
       ctx.drawImage(img, 0, 0, size, size);
       const imageData = ctx.getImageData(0, 0, size, size).data;
@@ -48,16 +62,16 @@ const Histogram: React.FC<{ imageUrl: string, className?: string }> = ({ imageUr
         bins[brightness]++;
       }
       const max = Math.max(...bins);
-      setData(bins.map(v => (v / max) * 100));
+      setData(bins.map(v => (v / (max || 1)) * 100));
     };
   }, [imageUrl]);
 
   return (
-    <div className={`h-20 bg-white/5 border border-white/10 p-2 flex items-end gap-[1px] relative overflow-hidden ${className}`}>
+    <div className={`h-16 bg-white/5 border border-white/10 flex items-end gap-[1px] relative overflow-hidden ${className}`}>
       {data.map((h, i) => (
         <div key={i} className="bg-white/20 flex-grow" style={{ height: `${h}%`, minWidth: '1px' }}></div>
       ))}
-      <div className="absolute top-1 left-2 mono text-[7px] text-zinc-600 font-bold uppercase tracking-widest bg-black/40 px-1">LUX_CHART</div>
+      <div className="absolute top-1 left-2 mono text-[6px] text-zinc-700 font-bold uppercase tracking-widest pointer-events-none">LUMINANCE_ANALYSIS</div>
     </div>
   );
 };
@@ -81,6 +95,7 @@ const App: React.FC = () => {
   const [currentUpload, setCurrentUpload] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [currentTip, setCurrentTip] = useState(PHOTO_TIPS[0]);
+  const [currentStatus, setCurrentStatus] = useState(STATUS_WORDS[0]);
   const [currentResult, setCurrentResult] = useState<{scores: DetailedScores, analysis: DetailedAnalysis} | null>(null);
   const [userNote, setUserNote] = useState('');
   const [selectedEntry, setSelectedEntry] = useState<PhotoEntry | null>(null);
@@ -88,13 +103,15 @@ const App: React.FC = () => {
   const [selectedTitle, setSelectedTitle] = useState('');
   const [activeTags, setActiveTags] = useState<string[]>([]);
   const [copied, setCopied] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let interval: any;
     if (isAnalyzing) {
       interval = setInterval(() => {
         setCurrentTip(PHOTO_TIPS[Math.floor(Math.random() * PHOTO_TIPS.length)]);
-      }, 7000);
+        setCurrentStatus(STATUS_WORDS[Math.floor(Math.random() * STATUS_WORDS.length)]);
+      }, 3500);
     }
     return () => clearInterval(interval);
   }, [isAnalyzing]);
@@ -102,21 +119,31 @@ const App: React.FC = () => {
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (file.size > MAX_FILE_SIZE) {
+        setError("文件过大 (上限 15MB)。请上传压缩后的 JPG/PNG。");
+        return;
+      }
       const r = new FileReader();
       r.onload = (ev) => {
         const base64 = ev.target?.result as string;
         setCurrentUpload(base64);
-        EXIF.getData(file as any, function(this: any) {
-          const allMetaData = EXIF.getAllTags(this);
-          setCurrentExif({
-            camera: allMetaData.Model || "Unknown Device",
-            aperture: allMetaData.FNumber ? `f/${allMetaData.FNumber}` : "N/A",
-            shutterSpeed: allMetaData.ExposureTime ? 
-              (allMetaData.ExposureTime < 1 ? `1/${Math.round(1/allMetaData.ExposureTime)}s` : `${allMetaData.ExposureTime}s`) : "N/A",
-            iso: allMetaData.ISOSpeedRatings ? `ISO ${allMetaData.ISOSpeedRatings}` : "N/A",
-            focalLength: allMetaData.FocalLength ? `${allMetaData.FocalLength}mm` : "N/A",
+        setError(null);
+        setCurrentResult(null);
+        try {
+          EXIF.getData(file as any, function(this: any) {
+            const allMetaData = EXIF.getAllTags(this);
+            setCurrentExif({
+              camera: allMetaData.Model || "Unknown Device",
+              aperture: allMetaData.FNumber ? `f/${allMetaData.FNumber}` : "N/A",
+              shutterSpeed: allMetaData.ExposureTime ? 
+                (allMetaData.ExposureTime < 1 ? `1/${Math.round(1/allMetaData.ExposureTime)}s` : `${allMetaData.ExposureTime}s`) : "N/A",
+              iso: allMetaData.ISOSpeedRatings ? `ISO ${allMetaData.ISOSpeedRatings}` : "N/A",
+              focalLength: allMetaData.FocalLength ? `${allMetaData.FocalLength}mm` : "N/A",
+            });
           });
-        });
+        } catch (e) {
+          console.warn("EXIF extraction failed.");
+        }
       };
       r.readAsDataURL(file);
     }
@@ -125,13 +152,15 @@ const App: React.FC = () => {
   const startAnalysis = async () => {
     if (!currentUpload) return;
     setIsAnalyzing(true);
+    setError(null);
     try {
       const result = await analyzePhoto(currentUpload, { exif: currentExif });
       setCurrentResult(result);
       if (result.analysis.suggestedTitles?.length) setSelectedTitle(result.analysis.suggestedTitles[0]);
       if (result.analysis.suggestedTags?.length) setActiveTags(result.analysis.suggestedTags);
-    } catch (error) {
-      alert("AI 诊断服务暂不可用");
+    } catch (err: any) {
+      console.error(err);
+      setError("分析终端响应异常。请重试。");
     } finally {
       setIsAnalyzing(false);
     }
@@ -149,11 +178,11 @@ const App: React.FC = () => {
     if (!currentUpload || !currentResult) return;
     const newEntry: PhotoEntry = {
       id: `SEQ_${Date.now().toString().slice(-6)}`,
-      title: selectedTitle || `UNTITLED_ENTRY`,
+      title: selectedTitle || `UNTITLED`,
       imageUrl: currentUpload,
       date: new Date().toLocaleDateString('zh-CN').replace(/\//g, '.'),
       location: "STATION_ALPHA",
-      notes: userNote || "未填写备注",
+      notes: userNote || "No creator notes.",
       tags: activeTags,
       params: { 
         camera: currentExif?.camera, 
@@ -177,42 +206,75 @@ const App: React.FC = () => {
   const ScoreMeter = ({ score, label, color = "#fff", small = false }: { score: number | undefined, label: string, color?: string, small?: boolean }) => (
     <div className={`space-y-2 w-full ${small ? 'opacity-80' : ''}`}>
       <div className="flex justify-between items-end mono text-[11px] tracking-widest font-bold">
-        <span className="text-zinc-500 uppercase">{label}</span>
-        <span className="text-sm" style={{ color }}>{score ?? '--'}</span>
+        <span className="text-zinc-600 uppercase">{label}</span>
+        <span className="text-base font-black" style={{ color }}>{score ?? '--'}</span>
       </div>
       <div className="pixel-meter-bar"><div className="pixel-meter-fill" style={{ width: `${score ?? 0}%`, backgroundColor: color }}></div></div>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-black text-zinc-100">
+    <div className="min-h-screen bg-black text-zinc-100 selection:bg-[#D40000] selection:text-white pb-24 sm:pb-0">
+      {/* Sidebar / Bottom Nav */}
       <nav className="fixed left-0 top-0 h-full w-20 border-r border-white/5 flex flex-col items-center py-10 gap-16 z-50 bg-black mobile-bottom-nav">
-        <div className="w-10 h-10 bg-[#D40000] flex items-center justify-center font-black text-xs hidden sm:flex cursor-default">AP</div>
+        <div className="w-10 h-10 bg-[#D40000] flex items-center justify-center font-black text-xs hidden sm:flex cursor-default shadow-[0_0_15px_rgba(212,0,0,0.3)]">AP</div>
         <div className="flex flex-col sm:gap-10 items-center justify-around w-full sm:w-auto h-full sm:h-auto">
-          <button onClick={() => { setSelectedEntry(null); setActiveTab(NavTab.EVALUATION); }} className={`p-4 rounded-full transition-all ${activeTab === NavTab.EVALUATION && !selectedEntry ? 'text-white border border-white/20 bg-white/5' : 'text-zinc-700 hover:text-white'}`}><Zap size={26} strokeWidth={1.5} /></button>
-          <button onClick={() => { setSelectedEntry(null); setActiveTab(NavTab.PATH); }} className={`p-4 rounded-full transition-all ${activeTab === NavTab.PATH || selectedEntry ? 'text-white border border-white/20 bg-white/5' : 'text-zinc-700 hover:text-white'}`}><Activity size={26} strokeWidth={1.5} /></button>
+          <button 
+            onClick={() => { setSelectedEntry(null); setActiveTab(NavTab.EVALUATION); }} 
+            className={`p-4 rounded-full transition-all ${activeTab === NavTab.EVALUATION && !selectedEntry ? 'text-white border border-white/20 bg-white/5' : 'text-zinc-700 hover:text-white'}`}
+          >
+            <Zap size={26} strokeWidth={1.5} />
+          </button>
+          <button 
+            onClick={() => { setSelectedEntry(null); setActiveTab(NavTab.PATH); }} 
+            className={`p-4 rounded-full transition-all ${activeTab === NavTab.PATH || selectedEntry ? 'text-white border border-white/20 bg-white/5' : 'text-zinc-700 hover:text-white'}`}
+          >
+            <Activity size={26} strokeWidth={1.5} />
+          </button>
         </div>
       </nav>
 
-      <main className="pl-20 min-h-screen flex flex-col main-content">
+      <main className="pl-0 sm:pl-20 min-h-screen flex flex-col main-content overflow-x-hidden">
         {activeTab === NavTab.EVALUATION && !selectedEntry && (
-          <div className="flex flex-col lg:flex-row min-h-screen mobile-stack">
-            {/* Left/Center Area: Image + Technical Metadata (Balanced) */}
-            <div className="flex-grow flex flex-col bg-[#050505] overflow-y-auto">
-              <div className="flex-grow flex flex-col items-center justify-center p-6 sm:p-10 relative overflow-hidden min-h-[45vh] lg:min-h-0">
+          <div className="flex flex-col lg:flex-row min-h-screen relative">
+            {/* Left Area: Display & Technical */}
+            <div className={`flex flex-col bg-[#050505] transition-all duration-1000 ease-in-out ${currentResult ? 'lg:flex-grow-0 lg:w-[50%]' : 'flex-grow'}`}>
+              <div className="flex-grow flex flex-col items-center justify-center p-6 sm:p-10 relative overflow-hidden min-h-[50vh]">
+                {error && (
+                  <div className="absolute top-10 z-30 flex items-center gap-2 bg-[#D40000] text-white px-4 py-2 rounded-sm mono text-[10px] animate-in slide-in-from-top-4">
+                    <AlertCircle size={14}/> {error}
+                    <button onClick={() => setError(null)} className="ml-4 hover:opacity-50"><X size={12}/></button>
+                  </div>
+                )}
+                
                 {currentUpload ? (
-                  <div className="relative max-w-full flex flex-col items-center animate-in fade-in duration-500">
+                  <div className={`relative max-w-full flex flex-col items-center transition-all duration-1000 ${currentResult ? 'scale-[0.92] lg:-translate-x-6 opacity-100' : 'scale-100'}`}>
                     <div className="relative group">
                       {isAnalyzing && (
-                        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-8 bg-black/80 backdrop-blur-xl rounded-sm">
-                          <div className="max-w-md text-center space-y-8 animate-in zoom-in duration-500">
-                            <div className="flex flex-col items-center gap-4"><div className="rec-dot"></div><div className="mono text-[#D40000] text-xs font-bold tracking-[0.5em] uppercase">PERCEIVING_PIXELS</div></div>
-                            <p className="text-xl font-medium leading-relaxed italic text-white/90 font-serif px-6">"{currentTip}"</p>
+                        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-8 bg-black/95 backdrop-blur-2xl rounded-sm border border-white/5 overflow-hidden">
+                          <div className="max-w-md text-center space-y-4 animate-in zoom-in duration-700">
+                             <div className="rec-dot mx-auto mb-6"></div>
+                             <div className="mono text-[#D40000] text-[10px] font-bold tracking-[0.6em] uppercase opacity-70 mb-2">{currentStatus}</div>
+                             
+                             <div className="space-y-4 p-8 bg-white/[0.03] border border-white/10 rounded-lg">
+                               <div className="flex items-center justify-center gap-2 text-[#D40000] mono text-[11px] font-bold">
+                                 <Lightbulb size={16} /> PHOTOGRAPHY_TIP
+                               </div>
+                               <p className="text-2xl font-medium leading-relaxed italic text-white/90 font-serif px-6 min-h-[4em] flex items-center justify-center">
+                                 {currentTip}
+                               </p>
+                             </div>
+                             
+                             <div className="mono text-[8px] text-zinc-700 tracking-widest uppercase mt-8">Establishing_Aesthetic_Criteria...</div>
                           </div>
+                          
+                          {/* 背景装饰 */}
+                          <div className="absolute top-10 left-10 w-20 h-[1px] bg-white/10"></div>
+                          <div className="absolute bottom-10 right-10 w-20 h-[1px] bg-white/10"></div>
                         </div>
                       )}
-                      <img src={currentUpload} className="max-w-full max-h-[50vh] sm:max-h-[60vh] object-contain shadow-2xl border border-white/10 p-1 bg-zinc-900" alt="Preview" />
-                      {!isAnalyzing && <button onClick={() => {setCurrentUpload(null); setCurrentResult(null); setCurrentExif(null);}} className="absolute -top-4 -right-4 bg-white text-black p-2 hover:bg-[#D40000] hover:text-white transition-all shadow-2xl z-30 rounded-sm"><X size={16}/></button>}
+                      <img src={currentUpload} className="max-w-full max-h-[50vh] sm:max-h-[60vh] object-contain shadow-[0_40px_100px_rgba(0,0,0,0.9)] border border-white/10 p-1 bg-zinc-900" alt="Preview" />
+                      {!isAnalyzing && <button onClick={() => {setCurrentUpload(null); setCurrentResult(null); setCurrentExif(null); setError(null);}} className="absolute -top-4 -right-4 bg-white text-black p-2 hover:bg-[#D40000] hover:text-white transition-all shadow-2xl z-30 rounded-sm"><X size={16}/></button>}
                     </div>
                   </div>
                 ) : (
@@ -221,28 +283,28 @@ const App: React.FC = () => {
                     <label className="flex flex-col items-center gap-10 cursor-pointer text-zinc-700 hover:text-white transition-all z-10 w-full h-full justify-center relative">
                       <div className="absolute top-8 right-10 flex items-center gap-3 mono text-[10px] tracking-widest font-bold"><div className="rec-dot"></div> STANDBY</div>
                       <div className="w-24 h-24 border border-zinc-900 flex items-center justify-center group-hover:border-[#D40000] group-hover:bg-[#D40000]/5 transition-all duration-700 rounded-full bg-zinc-900/10"><Plus size={40} strokeWidth={1} className="group-hover:rotate-90 transition-transform duration-500" /></div>
-                      <div className="mono text-xs tracking-[0.6em] font-bold text-center pl-2 uppercase flex items-center">IMPORT_MASTERPIECE <span className="cursor-blink"></span></div>
-                      <input type="file" className="hidden" accept="image/*" onChange={handleFileUpload} />
+                      <div className="mono text-sm tracking-[0.6em] font-bold text-center pl-2 uppercase flex items-center">IMPORT_IMAGE <span className="cursor-blink"></span></div>
+                      <input type="file" className="hidden" accept="image/jpeg,image/png,image/webp" onChange={handleFileUpload} />
                     </label>
                   </div>
                 )}
               </div>
 
-              {/* TECHNICAL_METADATA & ARCHIVE (Always under image, taking better space) */}
-              <div className="border-t border-white/10 bg-black/60 backdrop-blur-md">
+              {/* TECHNICAL TRAY */}
+              <div className={`border-t border-white/10 bg-black/60 backdrop-blur-md transition-all duration-700 ${currentResult ? 'opacity-100' : 'opacity-80'}`}>
                 <div className="p-8 sm:p-10 lg:p-12 grid grid-cols-1 md:grid-cols-12 gap-10 items-start">
                   <div className="md:col-span-5 space-y-8">
-                    <header className="flex items-center gap-3 mono text-[11px] text-[#D40000] font-bold tracking-widest uppercase"><Cpu size={14}/> TECHNICAL_METADATA</header>
+                    <header className="flex items-center gap-3 mono text-[11px] text-[#D40000] font-bold tracking-widest uppercase"><Cpu size={14}/> EXIF_METADATA</header>
                     <div className="grid grid-cols-2 gap-x-6 gap-y-4">
                       {currentExif ? (
                         Object.entries(currentExif).map(([key, value]) => (
                           <div key={key} className="space-y-1">
-                            <span className="mono text-[8px] text-zinc-600 uppercase block tracking-wider">{key}</span>
-                            <span className="mono text-[12px] text-zinc-300 font-bold truncate block">{value as string}</span>
+                            <span className="mono text-[8px] text-zinc-700 uppercase block tracking-wider font-bold">{key}</span>
+                            <span className="mono text-sm text-zinc-300 font-bold truncate block">{value as string}</span>
                           </div>
                         ))
                       ) : (
-                        <div className="col-span-2 mono text-[10px] text-zinc-800 italic uppercase">Awaiting_Telemetry_Input...</div>
+                        <div className="col-span-2 mono text-[10px] text-zinc-900 italic uppercase">Awaiting_Data...</div>
                       )}
                     </div>
                     {currentUpload && (
@@ -254,28 +316,30 @@ const App: React.FC = () => {
 
                   <div className="md:col-span-7 md:border-l border-white/5 md:pl-10 space-y-8">
                      <div className="space-y-4">
-                        <label className="mono text-[10px] text-zinc-500 tracking-widest uppercase font-bold flex items-center gap-2"><div className="w-1.5 h-1.5 bg-[#D40000]"></div> Field_Notes</label>
+                        <label className="mono text-[11px] text-zinc-600 tracking-widest uppercase font-bold flex items-center gap-2"><div className="w-1.5 h-1.5 bg-[#D40000]"></div> Creator_Context</label>
                         <textarea 
                           value={userNote} 
                           onChange={(e) => setUserNote(e.target.value)} 
-                          className="w-full bg-zinc-900/20 border border-white/5 p-5 mono text-sm focus:border-white/20 focus:outline-none min-h-[110px] leading-relaxed transition-colors placeholder:text-zinc-900 rounded-sm" 
-                          placeholder="简单记录下此时的想法、地点或是那种稍纵即逝的心境..." 
+                          className="w-full bg-zinc-900/10 border border-white/5 p-6 mono text-base focus:border-white/20 focus:outline-none min-h-[120px] leading-relaxed transition-colors placeholder:text-zinc-900 rounded-sm" 
+                          placeholder="输入拍摄时的动机或感悟..." 
                         />
                      </div>
                      
                      {currentResult && (
-                       <div className="p-6 bg-zinc-900/30 border border-white/5 rounded-sm space-y-4 animate-in fade-in duration-700">
-                          <div className="flex items-center justify-between border-b border-white/5 pb-3">
-                             <div className="flex items-center gap-3 text-[#D40000] mono text-[10px] font-bold uppercase tracking-widest"><Instagram size={14}/> Instagram_Share_Kit</div>
-                             <button onClick={copyIns} className="text-zinc-500 hover:text-white transition-all flex items-center gap-2 mono text-[9px]">
-                                {copied ? 'COPIED' : 'COPY_CLIPBOARD'} {copied ? <Check size={12} className="text-green-500"/> : <Copy size={12}/>}
+                       <div className="p-8 bg-zinc-900/30 border border-white/5 rounded-sm space-y-6 animate-in fade-in duration-1000 shadow-2xl">
+                          <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                             <div className="flex items-center gap-3 text-zinc-600 mono text-[10px] font-bold uppercase tracking-widest"><Instagram size={16}/> Instagram_Kit</div>
+                             <button onClick={copyIns} className="text-zinc-600 hover:text-white transition-all flex items-center gap-2 mono text-[10px]">
+                                {copied ? 'DONE' : 'COPY'} {copied ? <Check size={14} className="text-green-500"/> : <Copy size={14}/>}
                              </button>
                           </div>
-                          <p className="text-sm text-zinc-400 italic leading-relaxed font-light">"{currentResult.analysis.instagramCaption}"</p>
-                          <div className="flex flex-wrap gap-2 pt-2">
-                             {currentResult.analysis.instagramHashtags?.map(h => (
-                               <span key={h} className="text-[10px] mono text-zinc-600 hover:text-zinc-400 cursor-default transition-colors">{h}</span>
-                             ))}
+                          <div className="space-y-4">
+                            <p className="text-sm text-zinc-300 italic font-light leading-relaxed">"{currentResult.analysis.instagramCaption}"</p>
+                            <div className="flex flex-wrap gap-2 pt-2">
+                              {currentResult.analysis.instagramHashtags?.map(tag => (
+                                <span key={tag} className="text-[10px] text-[#D40000] mono font-medium">{tag}</span>
+                              ))}
+                            </div>
                           </div>
                        </div>
                      )}
@@ -284,122 +348,208 @@ const App: React.FC = () => {
               </div>
             </div>
 
-            {/* Right Panel: Artistic Critique (Focused) */}
-            <div className="w-full lg:w-[460px] border-l border-white/10 p-8 sm:p-12 overflow-y-auto space-y-12 bg-black mobile-panel shadow-2xl z-10">
-              <header className="space-y-4">
-                <div className="flex items-center gap-3"><div className="w-3 h-3 bg-[#D40000]"></div><span className="mono text-xs font-bold tracking-widest text-[#D40000]">ARTISTIC_VERDICT_v5.5</span></div>
-                <h2 className="text-4xl font-black italic tracking-tighter uppercase leading-none">Perspective</h2>
-              </header>
+            {/* Right Panel: Analysis Result */}
+            <div className={`transition-all duration-1000 ease-in-out border-l border-white/10 overflow-y-auto bg-black shadow-[0_0_100px_rgba(0,0,0,1)] z-10 ${currentResult ? 'lg:w-[50%] w-full' : 'lg:w-[460px] w-full'}`}>
+              <div className="p-8 sm:p-12 lg:p-16 space-y-16">
+                <header className="space-y-4">
+                  <div className="flex items-center gap-3"><div className="w-3 h-3 bg-[#D40000]"></div><span className="mono text-[11px] font-bold tracking-widest text-[#D40000]">AUDIT_REPORT_v8.0</span></div>
+                  <h2 className="text-6xl font-black italic tracking-tighter uppercase leading-none">Audit</h2>
+                </header>
 
-              {!currentResult ? (
-                <div className="space-y-12">
-                  <p className="text-zinc-600 text-sm leading-relaxed font-light">系统将通过机器视觉深度分析光影流转、构图张力及情感叙事。诊断过程将对影像进行像素级美学重构。</p>
-                  <button 
-                    disabled={!currentUpload || isAnalyzing} 
-                    onClick={startAnalysis} 
-                    className="w-full border border-white/20 py-7 mono text-xs font-bold tracking-[0.5em] hover:bg-white hover:text-black disabled:opacity-5 transition-all uppercase shadow-lg group"
-                  >
-                    {isAnalyzing ? 'PERCEIVING_ART...' : 'RUN_AUDIT'}
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-12 animate-in slide-in-from-right-4 duration-700">
-                  <div className="space-y-5">
-                    <div className="flex items-center gap-3 text-[#D40000] mono text-[10px] font-bold uppercase tracking-widest"><TypeIcon size={16}/> Suggested_Titles</div>
-                    <div className="flex flex-wrap gap-2">
-                      {currentResult.analysis.suggestedTitles?.map(title => (
-                        <button 
-                          key={title} 
-                          onClick={() => setSelectedTitle(title)} 
-                          className={`px-4 py-2 border mono text-[10px] rounded-sm transition-all ${selectedTitle === title ? 'bg-[#D40000] border-[#D40000] text-white' : 'border-white/5 text-zinc-600 hover:border-white/20'}`}
-                        >
-                          {title}
-                        </button>
-                      ))}
-                    </div>
+                {!currentResult ? (
+                  <div className="space-y-12">
+                    <p className="text-zinc-600 text-lg leading-relaxed font-light">
+                      AI 评论家将对影像的构图意图、影调控制及叙事逻辑进行非情感化的深度审计。
+                      <br/><br/>
+                      本系统遵循严格的评分哲学：只有具备明确创作意图的作品才能获得及格以上的评价。
+                    </p>
+                    <button 
+                      disabled={!currentUpload || isAnalyzing} 
+                      onClick={startAnalysis} 
+                      className="w-full border border-white/20 py-10 mono text-sm font-bold tracking-[0.5em] hover:bg-white hover:text-black disabled:opacity-5 transition-all uppercase shadow-lg group active:scale-[0.98]"
+                    >
+                      {isAnalyzing ? 'AUDITING...' : 'RUN_AUDIT'}
+                    </button>
                   </div>
+                ) : (
+                  <div className="space-y-20 animate-in slide-in-from-right-12 duration-1000">
+                    <div className="space-y-12">
+                      <div className="space-y-6">
+                        <div className="flex items-center gap-3 text-[#D40000] mono text-[11px] font-bold uppercase tracking-widest"><TypeIcon size={18}/> Suggested_Titles</div>
+                        <div className="flex flex-wrap gap-3">
+                          {currentResult.analysis.suggestedTitles?.map(title => (
+                            <button 
+                              key={title} 
+                              onClick={() => setSelectedTitle(title)} 
+                              className={`px-6 py-4 border mono text-xs rounded-sm transition-all ${selectedTitle === title ? 'bg-[#D40000] border-[#D40000] text-white shadow-[0_0_15px_rgba(212,0,0,0.3)]' : 'border-white/10 text-zinc-500 hover:border-white/30'}`}
+                            >
+                              {title}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
 
-                  <div className="space-y-5">
-                    <div className="flex items-center gap-3 text-zinc-700 mono text-[10px] font-bold uppercase tracking-widest"><TagIcon size={16}/> Visual_Audit_Tags</div>
-                    <div className="flex flex-wrap gap-2">
-                      {currentResult.analysis.suggestedTags?.map(tag => (
-                        <span key={tag} className="px-2 py-1 mono text-[9px] bg-zinc-900 border border-white/10 text-zinc-500 rounded-sm uppercase tracking-tighter">{tag}</span>
-                      ))}
+                      <div className="space-y-6">
+                        <div className="flex items-center gap-3 text-zinc-700 mono text-[11px] font-bold uppercase tracking-widest"><TagIcon size={18}/> Vision_Tags</div>
+                        <div className="flex flex-wrap gap-3">
+                          {currentResult.analysis.suggestedTags?.map(tag => (
+                            <span key={tag} className="px-5 py-2 mono text-[11px] bg-zinc-900 border border-white/5 text-zinc-400 rounded-sm uppercase tracking-tighter">{tag}</span>
+                          ))}
+                        </div>
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="grid grid-cols-2 gap-x-8 gap-y-10">
-                    <ScoreMeter score={currentResult.scores.composition} label="COMPOSITION" color="#D40000" />
-                    <ScoreMeter score={currentResult.scores.light} label="LIGHTING" color="#D40000" />
-                    <ScoreMeter score={currentResult.scores.content} label="NARRATIVE" color="#D40000" />
-                    <ScoreMeter score={currentResult.scores.completeness} label="EXPRESSION" color="#D40000" />
-                  </div>
-                  
-                  <div className="pt-6 border-t border-white/5">
-                    <ScoreMeter score={currentResult.scores.overall} label="AESTHETIC_QUOTIENT" color="#fff" />
-                  </div>
+                    <div className="grid grid-cols-2 gap-x-12 gap-y-16">
+                      <ScoreMeter score={currentResult.scores.composition} label="COMPOSITION" color="#D40000" />
+                      <ScoreMeter score={currentResult.scores.light} label="LIGHTING" color="#D40000" />
+                      <ScoreMeter score={currentResult.scores.content} label="NARRATIVE" color="#D40000" />
+                      <ScoreMeter score={currentResult.scores.completeness} label="EXPRESSION" color="#D40000" />
+                    </div>
+                    
+                    <div className="pt-10 border-t border-white/10">
+                      <ScoreMeter score={currentResult.scores.overall} label="FINAL_VERDICT" color="#fff" />
+                    </div>
 
-                  <div className="space-y-12 pt-10 border-t border-white/10">
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-3 text-[#D40000] mono text-xs font-bold uppercase tracking-widest"><MessageSquare size={18}/> Professional Diagnosis</div>
-                      <p className="text-lg text-zinc-200 leading-relaxed font-medium">{currentResult.analysis.diagnosis}</p>
+                    <div className="space-y-20 pt-10 border-t border-white/10">
+                      <div className="space-y-10">
+                        <div className="flex items-center gap-3 text-[#D40000] mono text-xs font-bold uppercase tracking-widest"><MessageSquare size={20}/> Professional Diagnosis</div>
+                        <div className="space-y-6">
+                          {currentResult.analysis.diagnosis.split('\n').map((para, i) => (
+                            <p key={i} className={`text-4xl text-zinc-50 leading-snug font-medium font-serif ${i > 0 ? 'border-t border-white/5 pt-6 text-zinc-400 text-3xl' : ''}`}>
+                              {para}
+                            </p>
+                          ))}
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-10">
+                        <div className="flex items-center gap-3 text-zinc-600 mono text-xs font-bold uppercase tracking-widest"><ImageIcon size={20}/> Story & Intent</div>
+                        <p className="text-2xl text-zinc-400 italic leading-relaxed border-l-4 border-[#D40000] pl-10 bg-white/[0.01] py-10 rounded-r-sm">"{currentResult.analysis.storyNote}"</p>
+                      </div>
+                      
+                      <div className="p-12 bg-zinc-900/40 border border-white/5 rounded-sm space-y-8 shadow-inner">
+                         <span className="mono text-[16px] text-[#D40000] font-bold tracking-[0.2em] block uppercase">Evolution Strategy</span>
+                         <p className="text-xl text-zinc-300 leading-relaxed font-light">{currentResult.analysis.improvement}</p>
+                      </div>
                     </div>
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-3 text-zinc-500 mono text-xs font-bold uppercase tracking-widest"><ImageIcon size={18}/> Scene Interpretation</div>
-                      <p className="text-base text-zinc-400 italic leading-relaxed border-l-2 border-[#D40000] pl-6 bg-white/[0.02] py-4 pr-4 rounded-r-sm">"{currentResult.analysis.storyNote}"</p>
-                    </div>
-                    <div className="p-8 bg-zinc-900/40 border border-white/5 rounded-sm space-y-4">
-                       <span className="mono text-[10px] text-[#D40000] font-bold tracking-widest block uppercase">Evolutionary Strategy</span>
-                       <p className="text-sm text-zinc-400 leading-relaxed font-light">{currentResult.analysis.improvement}</p>
-                    </div>
+                    
+                    <button onClick={saveRecord} className="w-full bg-[#D40000] py-12 mono text-base font-black tracking-[0.6em] hover:bg-[#B30000] transition-all uppercase shadow-[0_30px_60px_rgba(212,0,0,0.4)] active:scale-[0.98] flex items-center justify-center gap-8">
+                      COMMIT_TO_JOURNAL <ArrowRight size={28}/>
+                    </button>
                   </div>
-                  
-                  <button onClick={saveRecord} className="w-full bg-[#D40000] py-6 mono text-xs font-bold tracking-[0.5em] hover:bg-[#B30000] transition-all uppercase shadow-2xl active:scale-[0.98]">COMMIT_TO_JOURNAL</button>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
         )}
 
+        {/* Archives View */}
         {(activeTab === NavTab.PATH || selectedEntry) && (
-          <div className="p-8 sm:p-20 lg:p-24 max-w-7xl animate-in fade-in duration-1000">
+          <div className="p-8 sm:p-20 lg:p-24 max-w-7xl animate-in fade-in duration-1000 mx-auto w-full">
             {selectedEntry ? (
-              <div className="space-y-16">
-                <button onClick={() => setSelectedEntry(null)} className="flex items-center gap-4 mono text-xs text-zinc-600 hover:text-white uppercase tracking-[0.3em] transition-all group"><ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform"/> RETURN_TO_LIST</button>
+              <div className="space-y-24">
+                <button 
+                  onClick={() => setSelectedEntry(null)} 
+                  className="flex items-center gap-4 mono text-sm text-zinc-600 hover:text-white uppercase tracking-[0.3em] transition-all group"
+                >
+                  <ArrowLeft size={24} className="group-hover:-translate-x-1 transition-transform"/> BACK_TO_LIST
+                </button>
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 lg:gap-24">
-                  <div className="lg:col-span-7 space-y-12">
-                    <div className="relative"><img src={selectedEntry.imageUrl} className="w-full shadow-2xl border border-white/10 p-1 bg-zinc-900" alt="" /><div className="absolute top-4 left-4 flex flex-wrap gap-2">{selectedEntry.tags?.map(t => <span key={t} className="bg-black/60 backdrop-blur-md text-white mono text-[8px] px-2 py-1 rounded-sm uppercase border border-white/10">{t}</span>)}</div></div>
-                    <div className="flex flex-wrap gap-8 mono text-[10px] text-zinc-600 uppercase font-bold border-t border-white/5 pt-10">
-                      <div className="flex items-center gap-3 text-zinc-400"><Camera size={16} className="text-[#D40000]"/> {selectedEntry.params.camera}</div>
-                      <div>{selectedEntry.params.aperture}</div><div>{selectedEntry.params.shutterSpeed}</div><div>{selectedEntry.params.iso}</div>
+                  <div className="lg:col-span-7 space-y-16">
+                    <div className="relative">
+                      <img src={selectedEntry.imageUrl} className="w-full shadow-2xl border border-white/10 p-1 bg-zinc-900" alt="" />
+                      <div className="absolute top-4 left-4 flex flex-wrap gap-2">
+                        {selectedEntry.tags?.map(t => (
+                          <span key={t} className="bg-black/60 backdrop-blur-md text-white mono text-[10px] px-3 py-1.5 rounded-sm uppercase border border-white/10">{t}</span>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-8 mono text-sm text-[#D40000] uppercase font-bold border-t border-white/5 pt-12">
+                      <div className="flex items-center gap-3 text-zinc-200"><Camera size={22} className="text-[#D40000]"/> {selectedEntry.params.camera}</div>
+                      <div className="text-zinc-500">{selectedEntry.params.aperture}</div>
+                      <div className="text-zinc-500">{selectedEntry.params.shutterSpeed}</div>
+                      <div className="text-zinc-500">{selectedEntry.params.iso}</div>
                     </div>
                     <Histogram imageUrl={selectedEntry.imageUrl} className="w-full sm:w-96" />
                   </div>
-                  <div className="lg:col-span-5 space-y-16">
-                    <header className="space-y-5"><div className="mono text-xs text-[#D40000] font-bold tracking-widest uppercase flex items-center gap-3"><div className="w-4 h-[1px] bg-[#D40000]"></div> {selectedEntry.date}</div><h2 className="text-5xl font-black italic uppercase leading-none tracking-tighter">{selectedEntry.title}</h2><div className="mono text-[10px] text-zinc-700 font-bold">{selectedEntry.id}</div></header>
-                    <div className="grid grid-cols-2 gap-x-10 gap-y-14"><ScoreMeter score={selectedEntry.scores.composition} label="COMP" color="#D40000" /><ScoreMeter score={selectedEntry.scores.light} label="LGT" color="#D40000" /><ScoreMeter score={selectedEntry.scores.content} label="NARR" color="#D40000" /><ScoreMeter score={selectedEntry.scores.completeness} label="EXPR" color="#D40000" /></div>
-                    <div className="p-10 border border-white/5 space-y-12 bg-zinc-900/10 backdrop-blur-sm"><div className="space-y-5"><span className="mono text-xs text-zinc-700 uppercase tracking-widest font-bold block">AI Verdict</span><p className="text-xl text-zinc-200 font-medium leading-relaxed">{selectedEntry.analysis?.diagnosis}</p></div><div className="space-y-5 pt-10 border-t border-white/5"><span className="mono text-xs text-zinc-700 uppercase tracking-widest font-bold block">Creator Notes</span><p className="text-lg text-zinc-400 italic font-light leading-relaxed">"{selectedEntry.notes}"</p></div></div>
+                  <div className="lg:col-span-5 space-y-20">
+                    <header className="space-y-8">
+                      <div className="mono text-sm text-[#D40000] font-bold tracking-widest uppercase flex items-center gap-4">
+                        <div className="w-8 h-[1px] bg-[#D40000]"></div> {selectedEntry.date}
+                      </div>
+                      <h2 className="text-8xl font-black italic uppercase leading-none tracking-tighter">{selectedEntry.title}</h2>
+                      <div className="mono text-xs text-zinc-800 font-bold uppercase tracking-widest">{selectedEntry.id}</div>
+                    </header>
+                    <div className="grid grid-cols-2 gap-x-12 gap-y-16">
+                      <ScoreMeter score={selectedEntry.scores.composition} label="COMP" color="#D40000" />
+                      <ScoreMeter score={selectedEntry.scores.light} label="LGT" color="#D40000" />
+                      <ScoreMeter score={selectedEntry.scores.content} label="NARR" color="#D40000" />
+                      <ScoreMeter score={selectedEntry.scores.completeness} label="EXPR" color="#D40000" />
+                    </div>
+                    <div className="p-12 border border-white/5 space-y-16 bg-zinc-900/10 backdrop-blur-sm shadow-2xl">
+                      <div className="space-y-10">
+                        <span className="mono text-xs text-zinc-700 uppercase tracking-widest font-bold block">Audit Conclusion</span>
+                        <div className="space-y-6">
+                           {selectedEntry.analysis?.diagnosis.split('\n').map((para, i) => (
+                             <p key={i} className={`text-3xl text-zinc-50 font-medium leading-snug font-serif ${i > 0 ? 'text-zinc-400 text-2xl border-t border-white/5 pt-6' : ''}`}>
+                               {para}
+                             </p>
+                           ))}
+                        </div>
+                      </div>
+                      <div className="space-y-10 pt-10 border-t border-white/5">
+                        <span className="mono text-xs text-zinc-700 uppercase tracking-widest font-bold block">Creator Notes</span>
+                        <p className="text-3xl text-zinc-400 italic font-light leading-relaxed">"{selectedEntry.notes}"</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
             ) : (
-              <div className="space-y-24">
-                <header className="border-b border-white/10 pb-12 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-12">
-                  <div className="space-y-6"><h2 className="text-7xl font-black italic tracking-tighter uppercase leading-none">Archives</h2><p className="mono text-xs text-zinc-700 tracking-[0.6em] font-bold uppercase pl-1">Visual_Evolutionary_Data</p></div>
-                  <div className="mono text-left sm:text-right w-full sm:w-auto p-4 border-l sm:border-l-0 sm:border-r border-white/10"><p className="text-[10px] text-zinc-800 uppercase tracking-[0.3em] mb-2 font-bold">AVG_AESTHETIC_QUOTIENT</p><p className="text-7xl font-black text-[#D40000] tracking-tighter">{entries.length ? (entries.reduce((a, b) => a + b.scores.overall, 0) / entries.length).toFixed(1) : '0.0'}</p></div>
+              <div className="space-y-32">
+                <header className="border-b border-white/10 pb-16 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-16">
+                  <div className="space-y-8">
+                    <h2 className="text-9xl font-black italic tracking-tighter uppercase leading-none">Archives</h2>
+                    <p className="mono text-sm text-zinc-700 tracking-[0.8em] font-bold uppercase pl-2">Evolution_Database</p>
+                  </div>
+                  <div className="mono text-left sm:text-right w-full sm:w-auto p-8 border-l sm:border-l-0 sm:border-r border-white/10">
+                    <p className="text-xs text-zinc-800 uppercase tracking-[0.4em] mb-4 font-bold">AVG_AUDIT_SCORE</p>
+                    <p className="text-9xl font-black text-[#D40000] tracking-tighter leading-none">
+                      {entries.length ? (entries.reduce((a, b) => a + (b.scores.overall || 0), 0) / entries.length).toFixed(1) : '0.0'}
+                    </p>
+                  </div>
                 </header>
-                <div className="space-y-2">
-                  {entries.map(entry => (
-                    <div key={entry.id} onClick={() => setSelectedEntry(entry)} className="bg-black border-y border-white/5 py-14 flex flex-col sm:flex-row items-start sm:items-center gap-12 hover:bg-[#080808] transition-all group cursor-pointer">
-                      <div className="w-full sm:w-56 h-36 bg-zinc-900 border border-white/10 flex-shrink-0 overflow-hidden relative archive-image"><img src={entry.imageUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" alt="" /><div className="absolute inset-0 bg-black/40 group-hover:bg-transparent transition-colors duration-500"></div></div>
-                      <div className="flex-grow grid grid-cols-1 sm:grid-cols-12 gap-10 items-center w-full">
-                        <div className="sm:col-span-6 space-y-3"><span className="mono text-xs font-bold text-zinc-700 uppercase group-hover:text-[#D40000] transition-colors">{entry.title || entry.id} // {entry.date}</span><p className="text-base text-zinc-500 truncate italic font-medium">"{entry.analysis?.diagnosis || entry.notes}"</p></div>
-                        <div className="sm:col-span-4 flex gap-10"><ScoreMeter score={entry.scores.composition} label="COMP" small /><ScoreMeter score={entry.scores.content} label="NARR" small /></div>
-                        <div className="sm:col-span-2 text-right hidden sm:block"><span className="mono text-5xl font-black italic group-hover:text-white transition-all duration-300">{entry.scores.overall}</span></div>
+                <div className="space-y-6">
+                  {entries.length === 0 ? (
+                    <div className="py-20 text-center mono text-zinc-800 text-sm tracking-widest uppercase">No_Data_Stored</div>
+                  ) : (
+                    entries.map(entry => (
+                      <div 
+                        key={entry.id} 
+                        onClick={() => setSelectedEntry(entry)} 
+                        className="bg-black border-y border-white/5 py-16 flex flex-col sm:flex-row items-start sm:items-center gap-16 hover:bg-[#0a0a0a] transition-all group cursor-pointer active:scale-[0.99]"
+                      >
+                        <div className="w-full sm:w-80 h-48 bg-zinc-900 border border-white/10 flex-shrink-0 overflow-hidden relative">
+                          <img src={entry.imageUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" alt="" />
+                          <div className="absolute inset-0 bg-black/50 group-hover:bg-transparent transition-colors duration-700"></div>
+                        </div>
+                        <div className="flex-grow grid grid-cols-1 sm:grid-cols-12 gap-12 items-center w-full">
+                          <div className="sm:col-span-6 space-y-6">
+                            <span className="mono text-base font-bold text-zinc-700 uppercase group-hover:text-[#D40000] transition-colors">{entry.title || entry.id} // {entry.date}</span>
+                            <p className="text-2xl text-zinc-400 truncate italic font-medium">"{entry.analysis?.diagnosis.split('\n')[0] || entry.notes}"</p>
+                          </div>
+                          <div className="sm:col-span-4 flex gap-16">
+                            <ScoreMeter score={entry.scores.composition} label="COMP" small />
+                            <ScoreMeter score={entry.scores.content} label="NARR" small />
+                          </div>
+                          <div className="sm:col-span-2 text-right hidden sm:block">
+                            <span className="mono text-8xl font-black italic group-hover:text-white transition-all duration-500">{entry.scores.overall}</span>
+                          </div>
+                        </div>
+                        <ChevronRight size={48} className="text-zinc-900 group-hover:text-white transition-all transform group-hover:translate-x-4" />
                       </div>
-                      <ChevronRight size={28} className="text-zinc-900 group-hover:text-white transition-all transform group-hover:translate-x-2" />
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </div>
             )}
