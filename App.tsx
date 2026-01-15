@@ -412,23 +412,21 @@ const App: React.FC = () => {
             <div className={`transition-all duration-1000 ease-in-out border-l border-white/10 overflow-y-auto bg-black shadow-[0_0_100px_rgba(0,0,0,1)] z-10 ${currentResult ? 'lg:w-[50%] w-full' : 'lg:w-[460px] w-full'}`}>
               <div className="p-8 sm:p-12 lg:p-16 space-y-16">
                 <header className="space-y-4">
-                  <div className="flex items-center gap-3"><div className="w-3 h-3 bg-[#D40000]"></div><span className="mono text-xs font-bold tracking-widest text-[#D40000]">AUDIT_REPORT_v8.0</span></div>
-                  <h2 className="text-6xl font-black italic tracking-tighter uppercase leading-none">Audit</h2>
+                  <div className="flex items-center gap-3"><div className="w-2 h-2 bg-[#D40000] rounded-full"></div><span className="mono text-xs font-bold tracking-widest text-zinc-500">AI_POWERED</span></div>
+                  <h2 className="text-5xl font-black tracking-tight leading-none">Lens Insight</h2>
                 </header>
 
                 {!currentResult ? (
                   <div className="space-y-12">
-                    <p className="text-zinc-600 text-base leading-relaxed font-light">
-                      AI 评论家将对影像的构图意图、影调控制及叙事逻辑进行非情感化的深度审计。
-                      <br/><br/>
-                      本系统遵循严格的评分哲学：只有具备明确创作意图的作品才能获得及格以上的评价。
+                    <p className="text-zinc-500 text-base leading-relaxed">
+                      上传你的作品，AI 会从构图、光影、叙事等角度给出专业反馈，帮助你发现进步空间。
                     </p>
                     <button 
                       disabled={!currentUpload || isAnalyzing} 
                       onClick={startAnalysis} 
                       className="w-full border border-white/20 py-10 mono text-sm font-bold tracking-[0.5em] hover:bg-white hover:text-black disabled:opacity-5 transition-all uppercase shadow-lg group active:scale-[0.98]"
                     >
-                      {isAnalyzing ? 'AUDITING...' : 'RUN_AUDIT'}
+                      {isAnalyzing ? '分析中...' : '开始分析'}
                     </button>
                   </div>
                 ) : (
