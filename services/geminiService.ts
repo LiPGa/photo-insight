@@ -1,13 +1,16 @@
 import { GoogleGenAI, GenerateContentResponse, Type } from "@google/genai";
 
+// Helper to get random score
+const getRandomScore = (min: number, max: number) => parseFloat((Math.random() * (max - min) + min).toFixed(1));
+
 // Mock 数据 - 本地测试时使用 (10分制)
-const MOCK_RESPONSE = {
+const getMockResponse = () => ({
   scores: {
-    composition: 7.2,
-    light: 6.8,
-    content: 6.5,
-    completeness: 7.0,
-    overall: 6.9
+    composition: getRandomScore(6.0, 8.5),
+    light: getRandomScore(5.5, 8.0),
+    content: getRandomScore(5.0, 7.5),
+    completeness: getRandomScore(6.0, 8.0),
+    overall: getRandomScore(6.0, 8.0)
   },
   analysis: {
     diagnosis: "这张照片展现了一个有趣的视角，光线的运用营造出一种宁静的氛围。构图上主体位置合理，但背景略显杂乱，分散了观者的注意力。\n\n色彩处理上偏向自然，没有过度调色的痕迹，这是值得肯定的。整体来看，这是一张有想法但执行上还有提升空间的作品。",
@@ -20,7 +23,7 @@ const MOCK_RESPONSE = {
     instagramCaption: "In the quiet moments, we find ourselves.",
     instagramHashtags: ["photography", "streetphotography", "lightandshadow", "urbanlife", "dailylife", "moments", "visualstorytelling"]
   }
-};
+});
 
 // Helper function to fetch image from URL and convert to base64
 async function fetchImageAsBase64(url: string): Promise<{ base64: string; mimeType: string }> {
@@ -50,10 +53,15 @@ export async function analyzePhoto(imageUri: string, technicalContext: any): Pro
   if (useMock) {
     console.log('🔧 Mock 模式: 返回模拟数据，不调用 Gemini API');
     await new Promise(resolve => setTimeout(resolve, 2000));
-    return MOCK_RESPONSE;
+    return getMockResponse();
   }
 
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new Error("未检测到 VITE_GEMINI_API_KEY，请在 .env.local 中配置");
+  }
+
+  const ai = new GoogleGenAI({ apiKey });
 
   let base64Data: string;
   let mimeType = 'image/jpeg';
@@ -82,11 +90,19 @@ export async function analyzePhoto(imageUri: string, technicalContext: any): Pro
     在认真看完这张照片后，用自然、有呼吸感的语言，
     结合技术与感受，给出诚实而专业的反馈。
 
-    【评分哲学】（采用 10 分制，可精确到小数点后一位）
+    【评分要求】（重要：请在 JSON 的 scores 字段中返回以下维度，采用 10 分制，可精确到小数点后一位）
+    1. composition (构图): 评估几何关系、平衡感与视觉引导。
+    2. light (光影): 评估光线性质、明暗对比与影调层次。
+    3. content (内容): 评估叙事性、情绪表达与瞬间抓取。
+    4. completeness (完成度): 评估后期处理、清晰度与整体执行。
+    5. overall (总分): 综合以上维度的整体评价，不应简单取平均值。
+
+    【评分哲学】
     - 普通随手拍、记录照的合理区间为 4.0–6.0 分。
     - 7.0 分以上必须体现明确的构图意识或拍摄意图。
     - 8.5 分以上仅属于具有强烈视觉张力、成熟表达或独特视角的作品。
     - 评分宁可偏低，也不要虚高。
+    - **【核心要求】请务必独立评估每个维度的分数：一张照片可能构图极佳但光影平庸，或者内容深刻但完整度欠佳。严禁给出四个维度完全一致或高度趋同的分数。**
 
     【评价方式（非常重要）】
     - 不要像论文或说明书一样列举术语。

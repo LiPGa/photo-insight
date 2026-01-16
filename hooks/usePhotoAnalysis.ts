@@ -26,7 +26,15 @@ export function usePhotoAnalysis() {
       
       interval = setInterval(() => {
         setThinkingIndex(prev => {
-          const nextStageIndex = (prev + 1) % AI_THINKING_STAGES.length;
+          // If we are already at the last stage, just rotate variations within that stage
+          if (prev >= AI_THINKING_STAGES.length - 1) {
+            const variations = AI_THINKING_STAGES[prev];
+            const randomVariation = variations[Math.floor(Math.random() * variations.length)];
+            setThinkingState(randomVariation);
+            return prev;
+          }
+
+          const nextStageIndex = prev + 1;
           
           // Randomly select a variation from the current stage
           const variations = AI_THINKING_STAGES[nextStageIndex];
