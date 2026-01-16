@@ -54,13 +54,20 @@ const TimelineEntry = memo(({
 
   const thumbnailSrc = cloudinaryThumb || localThumb;
 
+  // Determine score color based on value
+  const scoreColor = (entry.scores.overall || 0) >= 7.5
+    ? 'text-[#D40000]'
+    : (entry.scores.overall || 0) >= 6.0
+    ? 'text-zinc-400'
+    : 'text-zinc-500';
+
   return (
     <div
       onClick={onSelect}
-      className="group flex gap-6 p-4 rounded-2xl hover:bg-white/5 transition-all duration-300 cursor-pointer"
+      className="group flex gap-6 p-4 rounded-2xl hover:bg-white/5 transition-all duration-300 cursor-pointer border border-transparent hover:border-[#D40000]/10"
     >
       {/* Thumbnail */}
-      <div className="w-24 h-24 sm:w-32 sm:h-32 bg-zinc-900 rounded-xl overflow-hidden flex-shrink-0 shadow-lg shadow-black/20">
+      <div className="w-24 h-24 sm:w-32 sm:h-32 bg-zinc-900 rounded-xl overflow-hidden flex-shrink-0 shadow-lg shadow-black/20 ring-1 ring-white/5 group-hover:ring-[#D40000]/30 transition-all">
         {(!isCloudinary && loading) || !thumbnailSrc ? (
           <div className="w-full h-full bg-zinc-800 animate-pulse" />
         ) : (
@@ -80,11 +87,11 @@ const TimelineEntry = memo(({
             <span className="text-lg font-medium text-zinc-200 truncate group-hover:text-white transition-colors">
               {entry.title || 'Untitled'}
             </span>
-            <span className="text-xl font-light text-zinc-400 group-hover:text-white transition-colors">
+            <span className={`text-xl font-light ${scoreColor} group-hover:text-[#D40000] transition-colors mono`}>
               {entry.scores.overall?.toFixed(1)}
             </span>
           </div>
-          
+
           <div className="flex items-center gap-3 text-xs text-zinc-500 font-medium tracking-wide uppercase">
             <span>{entry.date?.split('.')[2] || ''}</span>
             <span className="w-1 h-1 rounded-full bg-zinc-700" />
@@ -98,7 +105,7 @@ const TimelineEntry = memo(({
       </div>
 
       <div className="flex items-center justify-center pl-4 opacity-0 group-hover:opacity-100 transition-opacity -translate-x-2 group-hover:translate-x-0 duration-300">
-        <ChevronRight size={20} className="text-zinc-600" />
+        <ChevronRight size={20} className="text-[#D40000]" />
       </div>
     </div>
   );
@@ -176,7 +183,7 @@ export const TimelineList: React.FC<TimelineListProps> = ({ entries, onSelectEnt
   return (
     <div className="relative pl-4 sm:pl-0">
       {/* Timeline line */}
-      <div className="absolute left-8 sm:left-[3.25rem] top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-zinc-800 to-transparent" />
+      <div className="absolute left-8 sm:left-[3.25rem] top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-[#D40000]/20 to-transparent" />
 
       {Object.entries(groupedEntries)
         .sort(([monthA], [monthB]) => {
@@ -188,8 +195,8 @@ export const TimelineList: React.FC<TimelineListProps> = ({ entries, onSelectEnt
         <div key={month} className="mb-20 last:mb-0 relative">
           {/* Month header */}
           <div className="flex items-center gap-6 mb-8 pl-0 sm:pl-8 sticky top-4 z-10">
-            <div className="w-2.5 h-2.5 bg-zinc-800 rounded-full ring-4 ring-[#09090b] relative z-10 ml-[1.15rem] sm:ml-0.5" />
-            <div className="flex items-baseline gap-3 backdrop-blur-md bg-[#09090b]/80 py-1 pr-4 rounded-full">
+            <div className="w-2.5 h-2.5 bg-[#D40000] rounded-full ring-4 ring-[#09090b] relative z-10 ml-[1.15rem] sm:ml-0.5 shadow-lg shadow-[#D40000]/50" />
+            <div className="flex items-baseline gap-3 backdrop-blur-md bg-[#09090b]/80 py-1 pr-4 rounded-full border border-white/5">
               <span className="text-xl font-light text-zinc-100 tracking-tight">{month}</span>
               <span className="text-xs text-zinc-600 font-medium uppercase tracking-wider">{monthEntries.length} Photos</span>
             </div>
