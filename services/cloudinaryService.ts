@@ -3,7 +3,7 @@ import { MAX_FILE_SIZE } from '../constants';
 const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || 'dvmjukj2e';
 const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || 'photopath';
 
-// Cloudinary file limits (Cloudinary free tier supports up to 20MB for images)
+// Cloudinary file limits (Cloudinary free tier supports up to 20MB for images, setting to 15MB for safety)
 // Use the same limit as UI validation to avoid mismatches
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
 
@@ -22,7 +22,8 @@ export interface UploadResult {
 export async function uploadImage(file: File): Promise<UploadResult> {
   // Validate file before upload (using same limit as UI validation)
   if (file.size > MAX_FILE_SIZE) {
-    throw new Error(`文件过大 (${(file.size / 1024 / 1024).toFixed(1)}MB)，上限 15MB`);
+    const maxSizeMB = MAX_FILE_SIZE / 1024 / 1024;
+    throw new Error(`文件过大 (${(file.size / 1024 / 1024).toFixed(1)}MB)，上限 ${maxSizeMB}MB`);
   }
 
   if (!ALLOWED_TYPES.includes(file.type) && !file.type.startsWith('image/')) {

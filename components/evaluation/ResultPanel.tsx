@@ -296,7 +296,7 @@ export const ResultPanel: React.FC<ResultPanelProps> = ({
                   )}
                 </div>
                 <span className="text-xs text-white/60 font-normal">
-                  {isSaving ? '正在跳转到档案页...' : '记录这次拍摄，追踪你的进步轨迹'}
+                  {isSaving ? '正在保存...' : '记录这次拍摄，追踪你的进步轨迹'}
                 </span>
               </div>
             </button>
