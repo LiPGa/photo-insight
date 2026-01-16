@@ -52,19 +52,57 @@ export const ShareCardModal: React.FC<ShareCardModalProps> = ({
         canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Failed to create blob'))), 'image/png');
       });
 
-      // Check if Web Share API with file sharing is available (mainly for mobile)
-      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-      const canShare = navigator.canShare && navigator.canShare({ files: [new File([blob], fileName, { type: 'image/png' })] });
-
-      if (isMobile && canShare) {
-        // Use Web Share API for mobile - saves directly to photos app
-        const file = new File([blob], fileName, { type: 'image/png' });
+      // Detect iOS devices
+      const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+      const isAndroid = /Android/i.test(navigator.userAgent);
+      
+      // Create file for sharing
+      const file = new File([blob], fileName, { type: 'image/png' });
+      
+      // Check if Web Share API with file sharing is available
+      const canShareFiles = navigator.canShare && navigator.canShare({ files: [file] });
+      
+      if (isIOS) {
+        // On iOS, use Web Share API which shows Photos as an option in the share sheet
+        // User can select "Save Image" which saves directly to Photos app
+        if (canShareFiles) {
+          try {
+            await navigator.share({
+              files: [file],
+              title: selectedTitle || 'PhotoPath 点评卡片',
+            });
+          } catch (shareError) {
+            // User cancelled or share failed - this is OK, just return
+            if ((shareError as Error).name !== 'AbortError') {
+              // If it's not a user cancellation, fall back to download
+              const link = document.createElement('a');
+              link.href = URL.createObjectURL(blob);
+              link.download = fileName;
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+              URL.revokeObjectURL(link.href);
+            }
+          }
+        } else {
+          // Fallback for iOS if Web Share API not available
+          // Create download link - user can long-press to save to Photos
+          const link = document.createElement('a');
+          link.href = URL.createObjectURL(blob);
+          link.download = fileName;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(link.href);
+        }
+      } else if (isAndroid && canShareFiles) {
+        // Use Web Share API for Android
         await navigator.share({
           files: [file],
           title: selectedTitle || 'PhotoPath 点评卡片',
         });
       } else {
-        // Fallback to download for desktop
+        // Fallback to download for desktop and other browsers
         const link = document.createElement('a');
         link.download = fileName;
         link.href = URL.createObjectURL(blob);
