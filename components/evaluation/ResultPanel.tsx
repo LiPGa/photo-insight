@@ -62,7 +62,7 @@ export const ResultPanel: React.FC<ResultPanelProps> = ({
   const [isContextCollapsed, setIsContextCollapsed] = useState(false);
 
   return (
-  <div className={`transition-all duration-1000 ease-in-out border-l border-white/10 overflow-y-auto bg-black shadow-[0_0_100px_rgba(0,0,0,1)] z-10 ${currentResult ? 'lg:w-[50%] w-full' : 'lg:w-[460px] w-full'}`}>
+  <div className={`transition-all duration-1000 ease-in-out border-l border-white/10 overflow-y-auto bg-black shadow-[0_0_100px_rgba(0,0,0,1)] z-10 ${currentResult ? 'lg:w-[50%] w-full' : 'lg:w-[500px] w-full'}`}>
     <div className="p-8 sm:p-12 lg:p-16 space-y-16">
       <header className="space-y-4">
         <div className="flex items-center gap-3">
@@ -104,13 +104,13 @@ export const ResultPanel: React.FC<ResultPanelProps> = ({
               Creator_Context
             </label>
             <p className="text-xs text-zinc-600 leading-relaxed">
-              记录拍摄时的地点、心情和创作意图，帮助 AI 更好地理解你的作品
+              记录地点、心情和意图，让 AI 更好地理解你的作品
             </p>
             <textarea
               value={userNote}
               onChange={(e) => onUserNoteChange(e.target.value)}
               className="w-full bg-black/50 border border-white/10 p-5 mono text-sm focus:border-[#D40000]/50 focus:outline-none min-h-[100px] leading-relaxed transition-colors placeholder:text-zinc-700 rounded-sm"
-              placeholder="📍 地点：上海外滩&#10;💭 心情：黄昏时分的宁静...&#10;🎯 意图：想捕捉城市与自然光的对话"
+              placeholder="📍 地点：...&#10;💭 心情：...&#10;🎯 意图：..."
             />
           </div>
 

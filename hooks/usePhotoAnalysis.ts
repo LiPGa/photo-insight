@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { DetailedScores, DetailedAnalysis } from '../types';
-import { AI_THINKING_STATES, PHOTO_TIPS } from '../constants';
+import { AI_THINKING_STAGES, PHOTO_TIPS } from '../constants';
 import { analyzePhoto } from '../services/geminiService';
 
 interface AnalysisResult {
@@ -12,7 +12,7 @@ export function usePhotoAnalysis() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [currentResult, setCurrentResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [thinkingState, setThinkingState] = useState(AI_THINKING_STATES[0]);
+  const [thinkingState, setThinkingState] = useState(AI_THINKING_STAGES[0][0]);
   const [thinkingIndex, setThinkingIndex] = useState(0);
   const [currentTip, setCurrentTip] = useState(PHOTO_TIPS[0]);
 
@@ -21,12 +21,19 @@ export function usePhotoAnalysis() {
     let interval: ReturnType<typeof setInterval>;
     if (isAnalyzing) {
       setThinkingIndex(0);
-      setThinkingState(AI_THINKING_STATES[0]);
+      // Initial state: Random from Stage 0
+      setThinkingState(AI_THINKING_STAGES[0][Math.floor(Math.random() * AI_THINKING_STAGES[0].length)]);
+      
       interval = setInterval(() => {
         setThinkingIndex(prev => {
-          const next = (prev + 1) % AI_THINKING_STATES.length;
-          setThinkingState(AI_THINKING_STATES[next]);
-          return next;
+          const nextStageIndex = (prev + 1) % AI_THINKING_STAGES.length;
+          
+          // Randomly select a variation from the current stage
+          const variations = AI_THINKING_STAGES[nextStageIndex];
+          const randomVariation = variations[Math.floor(Math.random() * variations.length)];
+          
+          setThinkingState(randomVariation);
+          return nextStageIndex;
         });
         setCurrentTip(PHOTO_TIPS[Math.floor(Math.random() * PHOTO_TIPS.length)]);
       }, 2000); // Faster rotation for better perceived speed

@@ -62,6 +62,7 @@ export async function getUserPhotoEntries(userId: string): Promise<PhotoEntry[]>
       .from('photo_entries')
       .select('*')
       .eq('user_id', userId)
+      .order('date', { ascending: false })
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -69,7 +70,31 @@ export async function getUserPhotoEntries(userId: string): Promise<PhotoEntry[]>
       return [];
     }
 
-    return (data || []).map(fromDbEntry);
+    return (data || []).map(fromDbEntry).sort((a, b) => {
+      // Primary sort: Date (Shooting time)
+      const dateA = a.date || '';
+      const dateB = b.date || '';
+      
+      // Use numeric sort for date strings (handles "2023.2.1" vs "2023.10.1" correctly)
+      const dateComparison = dateB.localeCompare(dateA, undefined, { numeric: true });
+      
+      if (dateComparison !== 0) {
+        // If dates are different (and not both empty/null which would be 0), return comparison
+        // But handle "empty" dates to be at the bottom?
+        if (!dateA && dateB) return 1;
+        if (dateA && !dateB) return -1;
+        return dateComparison;
+      }
+      
+      // Secondary sort: ID (proxy for creation time if IDs are sequential/timestamp-based) or just stability
+      // Since we don't have created_at in PhotoEntry (it's in DbEntry but not mapped to PhotoEntry explicitly except via ID maybe?)
+      // Wait, PhotoEntry doesn't have created_at.
+      // But we fetched with 'order created_at desc' from DB, so if dates are equal, they should preserve DB order?
+      // Native sort is not stable in all environments, but usually is in modern JS.
+      // Let's rely on DB secondary sort order for ties if possible, or use ID.
+      // Current ID format: SEQ_Timestamp. So string compare ID desc = newer first.
+      return b.id.localeCompare(a.id); 
+    });
   } catch (err) {
     console.error('Error fetching photo entries:', err);
     return [];

@@ -29,19 +29,19 @@ export const TechnicalPanel: React.FC<TechnicalPanelProps> = ({
   onCopyInstagram,
 }) => (
   <div className={`border-t border-white/10 bg-black/60 backdrop-blur-md transition-all duration-700 ${currentResult ? 'opacity-100' : 'opacity-80'}`}>
-    <div className="p-8 sm:p-10 lg:p-12 grid grid-cols-1 md:grid-cols-12 gap-10 items-start">
+    <div className="p-6 sm:p-8 grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
       {/* EXIF Section */}
-      <div className="md:col-span-5 space-y-8">
+      <div className="md:col-span-5 space-y-6">
         <header className="flex items-center gap-3 mono text-xs text-[#D40000] font-bold tracking-widest uppercase">
           <Cpu size={14} /> EXIF_METADATA
         </header>
-        <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+        <div className="grid grid-cols-2 gap-x-4 gap-y-3">
           {currentExif ? (
             Object.entries(currentExif)
               .filter(([key]) => key !== 'captureDate')
               .map(([key, value]) => (
-                <div key={key} className="space-y-1">
-                  <span className="mono text-[10px] text-zinc-700 uppercase block tracking-wider font-bold">
+                <div key={key} className="space-y-0.5">
+                  <span className="mono text-[10px] text-zinc-600 uppercase block tracking-wider font-bold">
                     {EXIF_LABELS[key] || key}
                   </span>
                   <span className="mono text-sm text-zinc-300 font-bold truncate block">
@@ -63,26 +63,26 @@ export const TechnicalPanel: React.FC<TechnicalPanelProps> = ({
       </div>
 
       {/* Instagram Section */}
-      <div className="md:col-span-7 md:border-l border-white/5 md:pl-10 space-y-8">
+      <div className="md:col-span-7 md:border-l border-white/5 md:pl-8 space-y-6">
         {currentResult && (
-          <div className="p-8 bg-zinc-900/30 border border-white/5 rounded-sm space-y-6 animate-in fade-in duration-1000 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-white/5 pb-4">
+          <div className="p-6 bg-zinc-900/30 border border-white/5 rounded-sm space-y-4 animate-in fade-in duration-1000 shadow-xl">
+            <div className="flex items-center justify-between border-b border-white/5 pb-3">
               <div className="flex items-center gap-3 text-zinc-600 mono text-xs font-bold uppercase tracking-widest">
                 <Instagram size={16} /> Instagram_Kit
               </div>
               <button
                 onClick={onCopyInstagram}
-                className="text-zinc-600 hover:text-white transition-all flex items-center gap-2 mono text-xs"
+                className="text-zinc-500 hover:text-white transition-all flex items-center gap-2 mono text-xs"
               >
                 {copied ? 'DONE' : 'COPY'}{' '}
                 {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
               </button>
             </div>
-            <div className="space-y-4">
+            <div className="space-y-3">
               <p className="text-sm text-zinc-300 italic font-light leading-relaxed">
                 "{currentResult.analysis?.instagramCaption || ''}"
               </p>
-              <div className="flex flex-wrap gap-2 pt-2">
+              <div className="flex flex-wrap gap-2 pt-1">
                 {currentResult.analysis?.instagramHashtags?.map((tag) => (
                   <span key={tag} className="text-xs text-[#D40000] mono font-medium">
                     {tag.startsWith('#') ? tag : `#${tag}`}

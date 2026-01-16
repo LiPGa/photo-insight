@@ -1,6 +1,6 @@
 import React from 'react';
 import { Cpu, Lightbulb } from 'lucide-react';
-import { AI_THINKING_STATES } from '../../constants';
+import { AI_THINKING_STAGES } from '../../constants';
 
 interface AnalyzingOverlayProps {
   thinkingState: { main: string; sub: string };
@@ -39,7 +39,7 @@ export const AnalyzingOverlay: React.FC<AnalyzingOverlayProps> = ({
 
       {/* 进度指示 */}
       <div className="flex items-center justify-center gap-2 pt-4">
-        {AI_THINKING_STATES.map((_, i) => (
+        {AI_THINKING_STAGES.map((_, i) => (
           <div
             key={i}
             className={`h-1 rounded-full transition-all duration-300 ${

@@ -178,7 +178,13 @@ export const TimelineList: React.FC<TimelineListProps> = ({ entries, onSelectEnt
       {/* Timeline line */}
       <div className="absolute left-8 sm:left-[3.25rem] top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-zinc-800 to-transparent" />
 
-      {Object.entries(groupedEntries).map(([month, monthEntries]: [string, PhotoEntry[]]) => (
+      {Object.entries(groupedEntries)
+        .sort(([monthA], [monthB]) => {
+          if (monthA === '未知日期') return 1;
+          if (monthB === '未知日期') return -1;
+          return monthB.localeCompare(monthA, undefined, { numeric: true });
+        })
+        .map(([month, monthEntries]: [string, PhotoEntry[]]) => (
         <div key={month} className="mb-20 last:mb-0 relative">
           {/* Month header */}
           <div className="flex items-center gap-6 mb-8 pl-0 sm:pl-8 sticky top-4 z-10">

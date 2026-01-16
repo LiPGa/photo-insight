@@ -12,8 +12,25 @@ import { uploadImage } from '../../services/cloudinaryService';
 import { compressImage } from '../../services/imageCompression';
 import { UploadArea } from './UploadArea';
 import { AnalyzingOverlay } from './AnalyzingOverlay';
+import { TechnicalPanel } from './TechnicalPanel';
+import { ResultPanel } from './ResultPanel';
+import { ShareCardModal } from '../ShareCardModal';
 
-// ... (imports remain)
+interface ExifData {
+  camera: string;
+  aperture: string;
+  shutterSpeed: string;
+  iso: string;
+  focalLength: string;
+  captureDate: string | null;
+}
+
+interface EvaluationViewProps {
+  entries: PhotoEntry[];
+  setEntries: React.Dispatch<React.SetStateAction<PhotoEntry[]>>;
+  onNavigateToArchives: () => void;
+  onShowAuthModal: () => void;
+}
 
 export const EvaluationView: React.FC<EvaluationViewProps> = ({
   entries,
@@ -21,7 +38,35 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
   onNavigateToArchives,
   onShowAuthModal,
 }) => {
-  // ... (hooks remain)
+  const { user } = useAuth();
+  const { remainingUses, incrementUsage, dailyLimit } = useDailyUsage(user?.id);
+  const { duplicateWarning, checkImage, saveToCache, clearWarning } = useImageCache();
+  const {
+    isAnalyzing,
+    currentResult,
+    error,
+    thinkingState,
+    thinkingIndex,
+    currentTip,
+    startAnalysis,
+    clearResult,
+    clearError,
+  } = usePhotoAnalysis();
+
+  const [currentUpload, setCurrentUpload] = useState<string | null>(null); // Cloudinary URL or base64
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null); // 本地预览 URL
+  const [currentExif, setCurrentExif] = useState<ExifData | null>(null);
+  const [userNote, setUserNote] = useState('');
+  const [selectedTitle, setSelectedTitle] = useState('');
+  const [activeTags, setActiveTags] = useState<string[]>([]);
+  const [copied, setCopied] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [showShareCard, setShowShareCard] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const currentFileRef = useRef<File | null>(null);
+
+  const isLimitReached = remainingUses <= 0;
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -254,8 +299,8 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
           )}
 
           {displayUrl ? (
-            <div className={`relative w-full h-full flex flex-col items-center justify-center transition-all duration-1000 ${currentResult ? 'scale-[0.92] lg:-translate-x-6 opacity-100' : 'scale-100'}`}>
-              <div className="relative group w-full h-full flex items-center justify-center">
+            <div className={`relative w-full h-full flex flex-col items-center justify-center transition-all duration-1000 ${currentResult ? 'opacity-100' : 'scale-100'}`}>
+              <div className="relative group w-full h-full flex items-center justify-center p-4">
                 {(isAnalyzing || isUploading) && (
                   <AnalyzingOverlay
                     thinkingState={isUploading ? { main: '正在上传图片...', sub: '上传到云存储中' } : thinkingState}
@@ -265,7 +310,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
                 )}
                 <img
                   src={displayUrl}
-                  className="max-w-full max-h-[85vh] object-contain shadow-[0_40px_100px_rgba(0,0,0,0.9)] border border-white/10 p-1 bg-zinc-900"
+                  className="max-w-full max-h-[75vh] object-contain shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/5 bg-zinc-900/50"
                   alt="Preview"
                 />
                 {!isAnalyzing && !isUploading && (
