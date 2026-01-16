@@ -60,5 +60,22 @@ export interface DailyPrompt {
 
 export enum NavTab {
   EVALUATION = 'evaluation',
-  PATH = 'path'
+  PATH = 'path',
+  LEARN = 'learn'
+}
+
+// 学习进度追踪
+export interface LearningStats {
+  streak: number;           // 连续挑战天数
+  totalChallenges: number;  // 完成的总挑战数
+  lastChallengeDate?: string;
+  weakestSkill?: keyof DetailedScores;
+  strongestSkill?: keyof DetailedScores;
+}
+
+// 挑战完成记录
+export interface ChallengeCompletion {
+  promptId: string;
+  completedAt: string;
+  photoEntryId?: string;
 }

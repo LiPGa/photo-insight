@@ -116,5 +116,88 @@ export const INITIAL_GOALS: Goal[] = [
 ];
 
 export const DAILY_PROMPTS: DailyPrompt[] = [
-  { id: 'p1', title: '负空间', description: '寻找一个主体并用大量留白包围它。', technique: '构图' }
+  { id: 'p1', title: '负空间', description: '寻找一个主体并用大量留白包围它，让留白成为画面的一部分。', technique: '构图' },
+  { id: 'p2', title: '黄金时刻', description: '在日出后或日落前的黄金时刻拍摄，捕捉柔和温暖的光线。', technique: '光影' },
+  { id: 'p3', title: '框中框', description: '利用门框、窗户、树枝等自然元素作为画框，增加画面层次。', technique: '构图' },
+  { id: 'p4', title: '倒影世界', description: '寻找水面、玻璃或任何反射表面，拍摄有趣的倒影。', technique: '创意' },
+  { id: 'p5', title: '极简主义', description: '用最少的元素讲述故事，追求画面的极致简洁。', technique: '构图' },
+  { id: 'p6', title: '影子猎人', description: '让影子成为主角，捕捉有趣的光影形状和图案。', technique: '光影' },
+  { id: 'p7', title: '色彩对比', description: '寻找强烈的色彩对比，如互补色或冷暖对比。', technique: '色彩' },
+  { id: 'p8', title: '低角度视角', description: '蹲下或趴下，从低角度拍摄，发现不一样的世界。', technique: '视角' },
+  { id: 'p9', title: '街头瞬间', description: '在街头等待一个决定性瞬间，人与环境的完美交汇。', technique: '纪实' },
+  { id: 'p10', title: '纹理之美', description: '近距离拍摄各种纹理：树皮、墙面、织物、水纹。', technique: '技术' },
+  { id: 'p11', title: '单色世界', description: '只关注一种颜色，在环境中寻找同色系的元素。', technique: '色彩' },
+  { id: 'p12', title: '引导线', description: '利用道路、栏杆、建筑线条引导观者视线。', technique: '构图' },
+  { id: 'p13', title: '逆光剪影', description: '对着光源拍摄，创造戏剧性的剪影效果。', technique: '光影' },
+  { id: 'p14', title: '静物叙事', description: '用日常物品讲述一个故事，注意布光和摆放。', technique: '表达' },
+  { id: 'p15', title: '对称之美', description: '寻找完美对称的场景，建筑、倒影、人物皆可。', technique: '构图' },
+  { id: 'p16', title: '蓝调时刻', description: '在日出前或日落后的蓝色时刻拍摄，捕捉冷调氛围。', technique: '光影' },
+  { id: 'p17', title: '层次感', description: '创造前景、中景、背景的层次，增加画面深度。', technique: '构图' },
+  { id: 'p18', title: '情绪肖像', description: '拍摄一张能传达强烈情绪的人像，眼神是关键。', technique: '表达' },
+  { id: 'p19', title: '几何猎人', description: '在日常环境中寻找有趣的几何形状和图案。', technique: '构图' },
+  { id: 'p20', title: '雨天魔法', description: '下雨天拍摄，捕捉雨滴、水洼倒影或朦胧氛围。', technique: '创意' },
+  { id: 'p21', title: '高调影像', description: '尝试高调摄影，以白色和亮色为主导。', technique: '技术' },
+  { id: 'p22', title: '低调影像', description: '尝试低调摄影，以黑色和暗色为主导，营造戏剧感。', technique: '技术' },
+  { id: 'p23', title: '动态模糊', description: '使用慢快门捕捉运动模糊，展现时间流动。', technique: '技术' },
+  { id: 'p24', title: '窗户故事', description: '透过窗户拍摄，或拍摄窗户本身，探索框架与光线。', technique: '创意' },
+  { id: 'p25', title: '人与建筑', description: '将人物放入建筑环境中，探索尺度与空间关系。', technique: '构图' },
+  { id: 'p26', title: '夜间漫步', description: '夜晚拍摄，利用城市灯光、霓虹、车轨创作。', technique: '光影' },
+  { id: 'p27', title: '自然光肖像', description: '只用自然光拍摄人像，观察光线方向和质感。', technique: '光影' },
+  { id: 'p28', title: '细节特写', description: '关注被忽视的小细节，手、眼睛、物品的局部。', technique: '表达' },
+  { id: 'p29', title: '重复图案', description: '寻找重复的元素和图案，创造视觉韵律。', technique: '构图' },
+  { id: 'p30', title: '孤独感', description: '拍摄一张能传达孤独或宁静感的照片。', technique: '表达' },
+  { id: 'p31', title: '日常诗意', description: '在最平凡的日常场景中发现诗意和美感。', technique: '表达' }
 ];
+
+// 学习建议 - 基于薄弱项的针对性练习
+export const SKILL_IMPROVEMENT_TIPS: Record<string, { tips: string[]; prompts: string[] }> = {
+  composition: {
+    tips: [
+      '多练习三分法构图，将主体放在交叉点上',
+      '尝试打破常规，用中心构图营造对称感',
+      '注意前景元素，增加画面纵深'
+    ],
+    prompts: ['p1', 'p3', 'p5', 'p12', 'p15', 'p17', 'p19', 'p25', 'p29']
+  },
+  light: {
+    tips: [
+      '观察光线的方向、质感和色温',
+      '利用逆光和侧光创造戏剧效果',
+      '黄金时刻和蓝调时刻是最佳练习时机'
+    ],
+    prompts: ['p2', 'p6', 'p13', 'p16', 'p26', 'p27']
+  },
+  color: {
+    tips: [
+      '学习色彩理论，了解互补色和类似色',
+      '尝试限制色彩数量，追求和谐',
+      '注意环境光对色彩的影响'
+    ],
+    prompts: ['p7', 'p11', 'p21', 'p22']
+  },
+  technical: {
+    tips: [
+      '多练习手动对焦和曝光控制',
+      '了解景深与光圈的关系',
+      '尝试不同快门速度的创意效果'
+    ],
+    prompts: ['p10', 'p21', 'p22', 'p23']
+  },
+  expression: {
+    tips: [
+      '拍摄前思考想要传达的情感',
+      '学会等待决定性瞬间',
+      '尝试用画面讲述完整的故事'
+    ],
+    prompts: ['p9', 'p14', 'p18', 'p28', 'p30', 'p31']
+  }
+};
+
+// 根据日期获取今日灵感
+export const getTodayPrompt = (): DailyPrompt => {
+  const now = new Date();
+  const startOfYear = new Date(now.getFullYear(), 0, 0);
+  const diff = now.getTime() - startOfYear.getTime();
+  const dayOfYear = Math.floor(diff / (1000 * 60 * 60 * 24));
+  return DAILY_PROMPTS[dayOfYear % DAILY_PROMPTS.length];
+};
