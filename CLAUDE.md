@@ -16,26 +16,26 @@ npm run preview      # Preview production build
 Set environment variables in `.env.local`:
 
 ```bash
-# Gemini API Key (必需) - 注意：必须使用 VITE_ 前缀才能在浏览器中访问
+# Gemini API Key (required) - must use VITE_ prefix for browser access
 VITE_GEMINI_API_KEY=your_gemini_api_key_here
 
-# Mock 模式 - 本地测试时跳过 API 调用，返回模拟数据 (可选)
+# Mock mode - skip API calls and return mock data for local testing (optional)
 VITE_MOCK_API=true
 
-# Supabase (可选 - 用于用户认证和数据持久化)
+# Supabase (optional - for user auth and data persistence)
 VITE_SUPABASE_URL=your_supabase_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 
-# Cloudinary (可选 - 用于图片上传)
+# Cloudinary (optional - for image upload/CDN)
 VITE_CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
 VITE_CLOUDINARY_UPLOAD_PRESET=your_upload_preset
 ```
 
-**重要提示：**
-1. **必须使用 `VITE_` 前缀**：只有以 `VITE_` 开头的环境变量才会被 Vite 暴露到浏览器代码中
-2. **创建 `.env.local` 文件**：在项目根目录创建此文件（`.env.local` 不会被提交到 Git）
-3. **重启开发服务器**：修改 `.env.local` 后必须重启 `npm run dev` 才能生效
-4. **本地开发时**建议开启 `VITE_MOCK_API=true` 节省 API 配额。部署时设为 `false` 或删除。
+**Important:**
+1. **Must use `VITE_` prefix**: Only env vars starting with `VITE_` are exposed to browser code by Vite
+2. **Create `.env.local` file**: In project root (git-ignored)
+3. **Restart dev server**: After changing `.env.local`, restart `npm run dev`
+4. **Use mock mode locally**: Set `VITE_MOCK_API=true` to save API quota during development
 
 ## Architecture
 
@@ -43,17 +43,21 @@ This is a React 19 + TypeScript photography progress tracking app ("PhotoPath") 
 
 ### Core Flow
 
-1. **Photo Upload** (`App.tsx`): Users upload photos via file input. EXIF metadata is extracted using `exifr` library.
+1. **Photo Upload** (`EvaluationView.tsx`): Users upload photos via drag-drop or file input. EXIF metadata is extracted using `exifr` library.
 
-2. **AI Analysis** (`services/geminiService.ts`): Photos are sent to Gemini API (`gemini-3-flash-preview` model) for aesthetic evaluation. The service returns:
-   - Scores (composition, light, content, completeness, overall) on a **10-point scale** (e.g., 6.5, 7.2)
+2. **Image Processing** (`services/imageCompression.ts`): Images are compressed client-side to ~2.5MB target before upload. Large images (>5MB) are resized to max 2048px dimension.
+
+3. **Image Storage** (`services/cloudinaryService.ts`): Compressed images are uploaded to Cloudinary CDN, returning a persistent URL.
+
+4. **AI Analysis** (`services/geminiService.ts`): Photos are sent to Gemini API (`gemini-3-flash-preview` model) for aesthetic evaluation. The service returns:
+   - Scores (composition, light, color, technical, expression, overall) on a **10-point scale**
    - Analysis (diagnosis, improvement suggestions, story interpretation)
    - Social media content (Instagram caption and hashtags)
    - Suggested titles and tags
 
-3. **Data Persistence**:
-   - Guest users: Photos stored in React state (lost on refresh)
-   - Logged-in users: Photos synced to Supabase (`photo_entries` table)
+5. **Data Persistence**:
+   - Guest users: Photos stored in React state (lost on refresh), 5 analyses/day limit
+   - Logged-in users: Photos synced to Supabase (`photo_entries` table), 20 analyses/day limit
 
 ### Project Structure
 
@@ -81,22 +85,27 @@ This is a React 19 + TypeScript photography progress tracking app ("PhotoPath") 
 │   ├── AuthModal.tsx            # Login/signup modal
 │   └── ShareCardModal.tsx       # Share card generator modal
 ├── hooks/
-│   ├── useDailyUsage.ts         # Daily usage limit logic
-│   ├── useImageCache.ts         # Duplicate image detection
-│   └── usePhotoAnalysis.ts      # Photo analysis state
+│   ├── useDailyUsage.ts         # Daily usage limit logic (5 guest / 20 user)
+│   ├── useImageCache.ts         # Duplicate image detection via hash
+│   ├── usePhotoAnalysis.ts      # Photo analysis state + AI thinking animation
+│   └── useThumbnail.ts          # Thumbnail generation
 ├── contexts/
 │   └── AuthContext.tsx          # Supabase auth context
 └── services/
-    ├── geminiService.ts         # AI photo analysis
-    ├── supabase.ts              # Supabase client
-    └── dataService.ts           # Database CRUD operations
+    ├── geminiService.ts         # AI photo analysis (with mock mode)
+    ├── supabase.ts              # Supabase client + type definitions
+    ├── dataService.ts           # CRUD for photo_entries, usage_stats, user_settings
+    ├── cloudinaryService.ts     # Image upload to Cloudinary CDN
+    └── imageCompression.ts      # Client-side image optimization
 ```
 
 ### Services
 
-- `services/geminiService.ts`: AI photo analysis with mock mode support
-- `services/supabase.ts`: Supabase client and database type definitions
-- `services/dataService.ts`: CRUD operations for `photo_entries`, `usage_stats`, `user_settings` tables
+- `services/geminiService.ts`: AI photo analysis with mock mode support. Uses schema-bound responses for reliable JSON parsing.
+- `services/cloudinaryService.ts`: Image upload to Cloudinary CDN with thumbnail/optimized URL generation.
+- `services/imageCompression.ts`: Canvas-based image compression with quality reduction loop until target size reached.
+- `services/supabase.ts`: Supabase client and database type definitions.
+- `services/dataService.ts`: CRUD operations for `photo_entries`, `usage_stats`, `user_settings` tables.
 
 ### Authentication
 
@@ -106,8 +115,8 @@ This is a React 19 + TypeScript photography progress tracking app ("PhotoPath") 
 ### Key Types (`types.ts`)
 
 - `PhotoEntry`: Complete photo record with metadata, scores, and analysis
-- `DetailedScores`: Numeric ratings (0-10) for composition, light, content, completeness, overall
-- `DetailedAnalysis`: AI-generated text feedback including diagnosis, improvement, story notes
+- `DetailedScores`: Numeric ratings (0-10) for composition, light, color, technical, expression, overall
+- `DetailedAnalysis`: AI-generated text feedback including diagnosis, improvement, storyNote, moodNote, overallSuggestion
 - `NavTab`: Navigation states (EVALUATION, PATH)
 
 ### UI Structure
@@ -116,6 +125,12 @@ This is a React 19 + TypeScript photography progress tracking app ("PhotoPath") 
 - Left sidebar navigation with Zap (evaluation) and Activity (archives) icons
 - Responsive design with mobile bottom navigation
 - Styling: Tailwind CSS via CDN, IBM Plex Mono for monospace elements, dark theme with Leica red (#D40000) accent
+
+### React 19 Patterns
+
+- **Lazy Loading**: `EvaluationView` and `ArchivesView` are lazy-loaded with `React.lazy()` + Suspense
+- **useTransition**: Used for non-blocking tab switches between views
+- **Memoization**: Components wrapped with `memo()` to prevent unnecessary re-renders
 
 ### Scoring Philosophy
 

@@ -21,14 +21,65 @@ interface ShareCardModalProps {
   onClose: () => void;
 }
 
+// Helper function to convert data URL to Blob
+const dataURLtoBlob = (dataURL: string): Blob => {
+  const arr = dataURL.split(',');
+  const mime = arr[0].match(/:(.*?);/)?.[1] || 'image/png';
+  const bstr = atob(arr[1]);
+  let n = bstr.length;
+  const u8arr = new Uint8Array(n);
+  while (n--) {
+    u8arr[n] = bstr.charCodeAt(n);
+  }
+  return new Blob([u8arr], { type: mime });
+};
+
 // Helper function to download the image
-const downloadImage = (imageUrl: string, title: string) => {
-  const link = document.createElement('a');
-  link.href = imageUrl;
-  link.download = `photopath_${title || 'insight'}_${Date.now()}.png`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+const downloadImage = async (imageUrl: string, title: string, isMobile: boolean): Promise<boolean> => {
+  const fileName = `photopath_${title || 'insight'}_${Date.now()}.png`;
+
+  try {
+    const blob = dataURLtoBlob(imageUrl);
+
+    // Try Web Share API first (best for mobile)
+    if (isMobile && navigator.share && navigator.canShare) {
+      const file = new File([blob], fileName, { type: 'image/png' });
+      const shareData = { files: [file] };
+
+      if (navigator.canShare(shareData)) {
+        await navigator.share(shareData);
+        return true;
+      }
+    }
+
+    // Fallback: Create blob URL and download
+    const blobUrl = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = fileName;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+
+    // Cleanup after a delay to ensure download starts
+    setTimeout(() => {
+      document.body.removeChild(link);
+      URL.revokeObjectURL(blobUrl);
+    }, 1000);
+
+    return true;
+  } catch (err) {
+    console.error('Download failed:', err);
+    return false;
+  }
+};
+
+// Timeout wrapper for promises
+const withTimeout = <T,>(promise: Promise<T>, ms: number, errorMsg: string): Promise<T> => {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error(errorMsg)), ms))
+  ]);
 };
 
 export const ShareCardModal: React.FC<ShareCardModalProps> = ({
@@ -62,23 +113,29 @@ export const ShareCardModal: React.FC<ShareCardModalProps> = ({
     setGenerationComplete(false);
 
     // Make the share card visible for rendering if it was hidden
-    if(shareCardRef.current) {
-        shareCardRef.current.style.display = 'block';
+    if (shareCardRef.current) {
+      shareCardRef.current.style.display = 'block';
     }
-
 
     try {
       // Give the browser a moment to render the element
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      const canvas = await html2canvas(shareCardRef.current, {
+      const canvasPromise = html2canvas(shareCardRef.current, {
         backgroundColor: '#000',
         scale: 2, // Higher resolution
         useCORS: true,
         logging: false,
         allowTaint: true,
-        imageTimeout: 20000, // Increased timeout
+        imageTimeout: 15000,
       });
+
+      // Add 30 second timeout for the entire generation process
+      const canvas = await withTimeout(
+        canvasPromise,
+        30000,
+        '生成超时，请重试'
+      );
 
       const imageUrl = canvas.toDataURL('image/png', 0.95);
       setGeneratedImageUrl(imageUrl);
@@ -86,13 +143,14 @@ export const ShareCardModal: React.FC<ShareCardModalProps> = ({
 
     } catch (err) {
       console.error('Failed to generate share card:', err);
-      setError('生成失败，请刷新或稍后重试。');
+      const errorMsg = err instanceof Error ? err.message : '生成失败，请刷新或稍后重试。';
+      setError(errorMsg);
     } finally {
       setIsGenerating(false);
-       // Hide the original card after rendering to only show the image
-      if(shareCardRef.current) {
+      // Hide the original card after rendering to only show the image
+      if (shareCardRef.current) {
         shareCardRef.current.style.display = 'none';
-    }
+      }
     }
   };
 
@@ -106,36 +164,24 @@ export const ShareCardModal: React.FC<ShareCardModalProps> = ({
   };
 
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleSave = () => {
-    if (!generatedImageUrl) return;
+  const handleSave = async () => {
+    if (!generatedImageUrl || isSaving) return;
 
-    if (isMobile) {
-      // On mobile, opening in a new tab is the most reliable way for users to save
-      const newTab = window.open();
-      if (newTab) {
-        newTab.document.write(
-            `<!DOCTYPE html>
-            <html>
-            <head>
-                <title>保存图片</title>
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <style>
-                    body { margin: 0; background: #0a0a0a; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-                    img { max-width: 100%; height: auto; }
-                    p { color: #999; font-family: sans-serif; text-align: center; position: absolute; top: 20px; }
-                </style>
-            </head>
-            <body>
-                <p>长按图片保存到相册</p>
-                <img src="${generatedImageUrl}" alt="分享图片" />
-            </body>
-            </html>`
-        );
+    setIsSaving(true);
+    setError(null);
+
+    try {
+      const success = await downloadImage(generatedImageUrl, selectedTitle, isMobile);
+      if (!success) {
+        setError('保存失败，请长按图片手动保存');
       }
-    } else {
-      // On desktop, we can trigger a direct download
-      downloadImage(generatedImageUrl, selectedTitle);
+    } catch (err) {
+      console.error('Save failed:', err);
+      setError('保存失败，请长按图片手动保存');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -163,7 +209,7 @@ export const ShareCardModal: React.FC<ShareCardModalProps> = ({
               生成成功
             </h3>
             <p className="text-xs text-zinc-400 mb-4">
-              {isMobile ? '长按下方图片即可保存到相册' : '点击下方按钮下载图片'}
+              {isMobile ? '点击按钮保存，或长按图片手动保存' : '点击下方按钮下载图片'}
             </p>
             <div className="bg-black rounded-lg p-2 my-4 flex justify-center">
                <img
@@ -172,15 +218,23 @@ export const ShareCardModal: React.FC<ShareCardModalProps> = ({
                 className="max-h-[60vh] w-auto max-w-full rounded-md object-contain"
               />
             </div>
-            {!isMobile && (
-              <button
-                onClick={handleSave}
-                className="w-full mt-4 py-3 bg-[#D40000] hover:bg-[#B30000] transition-colors rounded-lg flex items-center justify-center gap-2"
-              >
-                <Download size={18} />
-                <span className="font-medium">下载长图</span>
-              </button>
-            )}
+            <button
+              onClick={handleSave}
+              disabled={isSaving}
+              className="w-full mt-4 py-3 bg-[#D40000] hover:bg-[#B30000] disabled:bg-zinc-700 disabled:cursor-not-allowed transition-colors rounded-lg flex items-center justify-center gap-2"
+            >
+              {isSaving ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span className="font-medium">保存中...</span>
+                </>
+              ) : (
+                <>
+                  <Download size={18} />
+                  <span className="font-medium">{isMobile ? '保存到相册' : '下载长图'}</span>
+                </>
+              )}
+            </button>
             <button
               onClick={handleBack}
               className="w-full mt-2 py-2 text-zinc-400 hover:text-white transition-colors"
