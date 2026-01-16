@@ -123,10 +123,10 @@ export const ShareCardModal: React.FC<ShareCardModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 overflow-auto"
+      className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 overflow-auto"
       onClick={onClose}
     >
-      <div className="relative max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+      <div className="relative max-w-sm sm:max-w-md w-full" onClick={(e) => e.stopPropagation()}>
         {/* Close button */}
         <button
           onClick={onClose}
@@ -142,18 +142,18 @@ export const ShareCardModal: React.FC<ShareCardModalProps> = ({
           style={{ fontFamily: "'Inter', 'PingFang SC', sans-serif" }}
         >
           {/* Header */}
-          <div className="px-6 py-4 flex items-center justify-between border-b border-white/5">
+          <div className="px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between border-b border-white/5">
             <div className="flex items-center gap-2">
-              <div className="w-6 h-6 bg-[#D40000] rounded flex items-center justify-center text-[10px] font-black">
+              <div className="w-5 h-5 sm:w-6 sm:h-6 bg-[#D40000] rounded flex items-center justify-center text-[9px] sm:text-[10px] font-black">
                 AP
               </div>
-              <span className="text-sm font-medium text-zinc-400">PhotoPath</span>
+              <span className="text-xs sm:text-sm font-medium text-zinc-400">PhotoPath</span>
             </div>
-            <span className="text-xs text-zinc-600 mono">Lens Insight</span>
+            <span className="text-[10px] sm:text-xs text-zinc-600 mono">Lens Insight</span>
           </div>
 
           {/* Photo */}
-          <div className="px-4 pt-4">
+          <div className="px-3 sm:px-4 pt-3 sm:pt-4">
             <img
               src={currentUpload}
               className="w-full aspect-[4/3] object-cover rounded-lg"
@@ -163,8 +163,8 @@ export const ShareCardModal: React.FC<ShareCardModalProps> = ({
           </div>
 
           {/* Title and tags */}
-          <div className="px-6 pt-5 pb-4 border-b border-white/5">
-            <h3 className="text-xl font-bold text-white mb-2">{selectedTitle || '未命名作品'}</h3>
+          <div className="px-4 sm:px-6 pt-4 sm:pt-5 pb-3 sm:pb-4 border-b border-white/5">
+            <h3 className="text-lg sm:text-xl font-bold text-white mb-2">{selectedTitle || '未命名作品'}</h3>
             <div className="flex flex-wrap gap-2">
               {activeTags.slice(0, 3).map((tag) => (
                 <span key={tag} className="text-xs text-zinc-500 bg-zinc-900 px-2 py-1 rounded">
@@ -176,7 +176,7 @@ export const ShareCardModal: React.FC<ShareCardModalProps> = ({
 
           {/* Camera params */}
           {currentExif && (
-            <div className="px-6 py-3 border-b border-white/5 flex items-center gap-4 text-xs text-zinc-500">
+            <div className="px-4 sm:px-6 py-2 sm:py-3 border-b border-white/5 flex items-center gap-3 sm:gap-4 text-[11px] sm:text-xs text-zinc-500">
               <div className="flex items-center gap-1.5">
                 <Camera size={12} className="text-zinc-600" />
                 <span className="text-zinc-400">{currentExif.camera}</span>
@@ -188,8 +188,8 @@ export const ShareCardModal: React.FC<ShareCardModalProps> = ({
           )}
 
           {/* Scores */}
-          <div className="px-6 py-5 space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+          <div className="px-4 sm:px-6 py-4 sm:py-5 space-y-3 sm:space-y-4">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
               {[
                 { label: '构图', score: currentResult.scores.composition },
                 { label: '光影', score: currentResult.scores.light },
@@ -214,38 +214,38 @@ export const ShareCardModal: React.FC<ShareCardModalProps> = ({
             </div>
 
             {/* Overall score */}
-            <div className="flex items-center justify-between pt-3 border-t border-white/5">
-              <span className="text-sm font-medium text-zinc-400">综合评分</span>
-              <span className="text-3xl font-black text-[#D40000]">
+            <div className="flex items-center justify-between pt-2 sm:pt-3 border-t border-white/5">
+              <span className="text-xs sm:text-sm font-medium text-zinc-400">综合评分</span>
+              <span className="text-2xl sm:text-3xl font-black text-[#D40000]">
                 {currentResult.scores.overall.toFixed(1)}
               </span>
             </div>
           </div>
 
           {/* Diagnosis summary */}
-          <div className="px-6 pb-5">
-            <p className="text-sm text-zinc-400 leading-relaxed line-clamp-3">
+          <div className="px-4 sm:px-6 pb-4 sm:pb-5">
+            <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed line-clamp-3">
               {currentResult.analysis.diagnosis.split('\n')[0]}
             </p>
           </div>
 
           {/* Evolution strategy */}
-          <div className="mx-6 mb-5 p-4 bg-[#D40000]/10 border border-[#D40000]/20 rounded-lg">
+          <div className="mx-4 sm:mx-6 mb-4 sm:mb-5 p-3 sm:p-4 bg-[#D40000]/10 border border-[#D40000]/20 rounded-lg">
             <div className="flex items-center gap-2 mb-2">
-              <Lightbulb size={14} className="text-[#D40000]" />
-              <span className="text-xs font-bold text-[#D40000]">进化策略</span>
+              <Lightbulb size={12} className="sm:w-[14px] sm:h-[14px] text-[#D40000]" />
+              <span className="text-[11px] sm:text-xs font-bold text-[#D40000]">进化策略</span>
             </div>
-            <p className="text-sm text-zinc-300 leading-relaxed line-clamp-2">
+            <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed line-clamp-2">
               {currentResult.analysis.improvement}
             </p>
           </div>
 
           {/* Footer */}
-          <div className="px-6 py-4 bg-zinc-900/50 flex items-center justify-between">
-            <span className="text-[10px] text-zinc-600 mono">
+          <div className="px-4 sm:px-6 py-3 sm:py-4 bg-zinc-900/50 flex items-center justify-between">
+            <span className="text-[9px] sm:text-[10px] text-zinc-600 mono">
               AI 摄影点评 · {new Date().toLocaleDateString('zh-CN')}
             </span>
-            <span className="text-[10px] text-zinc-600">photopath.app</span>
+            <span className="text-[9px] sm:text-[10px] text-zinc-600">photopath.app</span>
           </div>
         </div>
 
@@ -258,7 +258,7 @@ export const ShareCardModal: React.FC<ShareCardModalProps> = ({
         <button
           onClick={generateShareCard}
           disabled={isGeneratingCard}
-          className="mt-4 w-full py-4 bg-[#D40000] hover:bg-[#B30000] disabled:bg-zinc-800 transition-all rounded-lg flex items-center justify-center gap-3"
+          className="mt-3 sm:mt-4 w-full py-3 sm:py-4 bg-[#D40000] hover:bg-[#B30000] disabled:bg-zinc-800 transition-all rounded-lg flex items-center justify-center gap-3"
         >
           {isGeneratingCard ? (
             <span className="text-sm">生成中...</span>
