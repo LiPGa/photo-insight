@@ -99,7 +99,7 @@ const AppContent: React.FC = () => {
 
       {/* 切换中的加载指示 */}
       {isPending && (
-        <div className="fixed top-0 left-0 right-0 h-1 bg-zinc-900 z-50">
+        <div className="fixed top-0 left-0 right-0 h-0.5 bg-zinc-900 z-50">
           <div className="h-full bg-[#D40000] animate-pulse" style={{ width: '30%' }} />
         </div>
       )}
@@ -107,7 +107,7 @@ const AppContent: React.FC = () => {
       {/* Main Content - 使用 CSS 切换显示而非条件渲染 */}
       <main className="pl-0 sm:pl-20 min-h-screen flex flex-col main-content overflow-x-hidden">
         <Suspense fallback={<LoadingFallback />}>
-          <div className={isEvaluationView ? 'contents' : 'hidden'}>
+          <div className={`${isEvaluationView ? 'contents animate-in fade-in duration-300' : 'hidden'}`}>
             <MemoizedEvaluationView
               entries={entries}
               setEntries={setEntries}
@@ -117,7 +117,7 @@ const AppContent: React.FC = () => {
             />
           </div>
 
-          <div className={isArchivesView ? 'contents' : 'hidden'}>
+          <div className={`${isArchivesView ? 'contents animate-in fade-in duration-300' : 'hidden'}`}>
             <MemoizedArchivesView
               entries={entries}
               selectedEntry={selectedEntry}
@@ -125,7 +125,7 @@ const AppContent: React.FC = () => {
             />
           </div>
 
-          <div className={isLearnView ? 'contents' : 'hidden'}>
+          <div className={`${isLearnView ? 'contents animate-in fade-in duration-300' : 'hidden'}`}>
             <MemoizedLearnView
               entries={entries}
               onNavigateToEvaluation={handleNavigateToEvaluation}
