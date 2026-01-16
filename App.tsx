@@ -10,6 +10,7 @@ import { getUserPhotoEntries } from './services/dataService';
 // 懒加载视图组件
 const EvaluationView = lazy(() => import('./components/evaluation/EvaluationView').then(m => ({ default: m.EvaluationView })));
 const ArchivesView = lazy(() => import('./components/archives/ArchivesView').then(m => ({ default: m.ArchivesView })));
+const LearnView = lazy(() => import('./components/learn/LearnView').then(m => ({ default: m.LearnView })));
 
 // 加载占位符
 const LoadingFallback = () => (
@@ -24,6 +25,7 @@ const LoadingFallback = () => (
 // 使用 memo 包装视图，避免不必要的重渲染
 const MemoizedEvaluationView = memo(EvaluationView);
 const MemoizedArchivesView = memo(ArchivesView);
+const MemoizedLearnView = memo(LearnView);
 
 const AppContent: React.FC = () => {
   const { user } = useAuth();
@@ -72,7 +74,14 @@ const AppContent: React.FC = () => {
   };
 
   const isEvaluationView = activeTab === NavTab.EVALUATION && !selectedEntry;
-  const isArchivesView = activeTab === NavTab.PATH || selectedEntry;
+  const isArchivesView = (activeTab === NavTab.PATH || selectedEntry) && activeTab !== NavTab.LEARN;
+  const isLearnView = activeTab === NavTab.LEARN && !selectedEntry;
+
+  const handleNavigateToEvaluation = () => {
+    startTransition(() => {
+      setActiveTab(NavTab.EVALUATION);
+    });
+  };
 
   return (
     <div className="min-h-screen bg-black text-zinc-100 selection:bg-[#D40000] selection:text-white pb-24 sm:pb-0">
@@ -103,6 +112,7 @@ const AppContent: React.FC = () => {
               entries={entries}
               setEntries={setEntries}
               onNavigateToArchives={handleNavigateToArchives}
+              onNavigateToLearn={() => startTransition(() => setActiveTab(NavTab.LEARN))}
               onShowAuthModal={() => setShowAuthModal(true)}
             />
           </div>
@@ -112,6 +122,13 @@ const AppContent: React.FC = () => {
               entries={entries}
               selectedEntry={selectedEntry}
               onSelectEntry={handleSelectEntry}
+            />
+          </div>
+
+          <div className={isLearnView ? 'contents' : 'hidden'}>
+            <MemoizedLearnView
+              entries={entries}
+              onNavigateToEvaluation={handleNavigateToEvaluation}
             />
           </div>
         </Suspense>

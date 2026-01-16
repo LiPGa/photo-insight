@@ -1,5 +1,5 @@
 import React from 'react';
-import { Zap, Activity, User, LogOut } from 'lucide-react';
+import { Zap, Activity, User, LogOut, Lightbulb } from 'lucide-react';
 import { NavTab } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -53,6 +53,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
           }`}
         >
           <Activity size={28} className="sm:w-[26px] sm:h-[26px]" strokeWidth={1.5} />
+        </button>
+        <button
+          onClick={() => handleTabClick(NavTab.LEARN)}
+          className={`p-5 sm:p-4 rounded-full transition-all active:scale-95 active:bg-white/10 ${
+            activeTab === NavTab.LEARN
+              ? 'text-white border border-white/20 bg-white/5'
+              : 'text-zinc-700 hover:text-white'
+          }`}
+        >
+          <Lightbulb size={28} className="sm:w-[26px] sm:h-[26px]" strokeWidth={1.5} />
         </button>
       </div>
 

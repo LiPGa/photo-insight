@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { X, AlertCircle, Loader2 } from 'lucide-react';
 import exifr from 'exifr';
 import { PhotoEntry, NavTab } from '../../types';
-import { MAX_FILE_SIZE } from '../../constants';
+import { MAX_FILE_SIZE, getTodayPrompt } from '../../constants';
 import { useAuth } from '../../contexts/AuthContext';
 import { useDailyUsage } from '../../hooks/useDailyUsage';
 import { useImageCache } from '../../hooks/useImageCache';
@@ -15,6 +15,7 @@ import { AnalyzingOverlay } from './AnalyzingOverlay';
 import { TechnicalPanel } from './TechnicalPanel';
 import { ResultPanel } from './ResultPanel';
 import { ShareCardModal } from '../ShareCardModal';
+import { DailyPromptCard } from '../learn/DailyPromptCard';
 
 interface ExifData {
   camera: string;
@@ -29,6 +30,7 @@ interface EvaluationViewProps {
   entries: PhotoEntry[];
   setEntries: React.Dispatch<React.SetStateAction<PhotoEntry[]>>;
   onNavigateToArchives: () => void;
+  onNavigateToLearn: () => void;
   onShowAuthModal: () => void;
 }
 
@@ -36,8 +38,10 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
   entries,
   setEntries,
   onNavigateToArchives,
+  onNavigateToLearn,
   onShowAuthModal,
 }) => {
+  const todayPrompt = getTodayPrompt();
   const { user } = useAuth();
   const { remainingUses, incrementUsage, dailyLimit } = useDailyUsage(user?.id);
   const { duplicateWarning, checkImage, saveToCache, clearWarning } = useImageCache();
@@ -331,7 +335,17 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
               </div>
             </div>
           ) : (
-            <UploadArea onFileSelect={handleFileUpload} />
+            <div className="flex flex-col items-center w-full max-w-xl">
+              {/* Compact Daily Prompt */}
+              <div className="w-full mb-4 px-4">
+                <DailyPromptCard
+                  prompt={todayPrompt}
+                  onStartChallenge={onNavigateToLearn}
+                  compact
+                />
+              </div>
+              <UploadArea onFileSelect={handleFileUpload} />
+            </div>
           )}
         </div>
 
