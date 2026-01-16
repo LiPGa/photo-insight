@@ -32,40 +32,40 @@ export const Sidebar: React.FC<SidebarProps> = ({
         AP
       </div>
 
-      {/* Navigation buttons - with labels on mobile */}
-      <div className="flex flex-col sm:gap-10 items-center justify-around w-full sm:w-auto h-full sm:h-auto flex-grow px-2 sm:px-0">
+      {/* Navigation buttons - horizontal on mobile, vertical on desktop */}
+      <div className="flex flex-row sm:flex-col gap-4 sm:gap-10 items-center justify-evenly sm:justify-start w-full sm:w-auto h-auto sm:h-auto flex-grow sm:flex-grow-0 px-4 sm:px-0">
         <button
           onClick={() => handleTabClick(NavTab.EVALUATION)}
-          className={`flex flex-col items-center gap-1 sm:gap-0 p-3 sm:p-4 rounded-xl sm:rounded-full transition-all active:scale-95 ${
+          className={`flex flex-col items-center justify-center gap-1 min-w-[70px] sm:min-w-0 p-2.5 sm:p-4 rounded-xl sm:rounded-full transition-all active:scale-95 ${
             activeTab === NavTab.EVALUATION && !selectedEntry
-              ? 'text-white bg-white/10 border border-white/20'
+              ? 'text-white bg-white/10 border border-white/20 shadow-lg'
               : 'text-zinc-500 active:bg-white/5'
           }`}
         >
-          <Zap size={24} className="sm:w-[26px] sm:h-[26px]" strokeWidth={1.5} />
-          <span className="text-[10px] font-medium tracking-wider sm:hidden">评估</span>
+          <Zap size={22} className="sm:w-[26px] sm:h-[26px]" strokeWidth={1.5} />
+          <span className="text-[9px] font-medium tracking-wider sm:hidden">评估</span>
         </button>
         <button
           onClick={() => handleTabClick(NavTab.PATH)}
-          className={`flex flex-col items-center gap-1 sm:gap-0 p-3 sm:p-4 rounded-xl sm:rounded-full transition-all active:scale-95 ${
+          className={`flex flex-col items-center justify-center gap-1 min-w-[70px] sm:min-w-0 p-2.5 sm:p-4 rounded-xl sm:rounded-full transition-all active:scale-95 ${
             activeTab === NavTab.PATH || selectedEntry
-              ? 'text-white bg-white/10 border border-white/20'
+              ? 'text-white bg-white/10 border border-white/20 shadow-lg'
               : 'text-zinc-500 active:bg-white/5'
           }`}
         >
-          <Activity size={24} className="sm:w-[26px] sm:h-[26px]" strokeWidth={1.5} />
-          <span className="text-[10px] font-medium tracking-wider sm:hidden">归档</span>
+          <Activity size={22} className="sm:w-[26px] sm:h-[26px]" strokeWidth={1.5} />
+          <span className="text-[9px] font-medium tracking-wider sm:hidden">归档</span>
         </button>
         <button
           onClick={() => handleTabClick(NavTab.LEARN)}
-          className={`flex flex-col items-center gap-1 sm:gap-0 p-3 sm:p-4 rounded-xl sm:rounded-full transition-all active:scale-95 ${
+          className={`flex flex-col items-center justify-center gap-1 min-w-[70px] sm:min-w-0 p-2.5 sm:p-4 rounded-xl sm:rounded-full transition-all active:scale-95 ${
             activeTab === NavTab.LEARN
-              ? 'text-white bg-white/10 border border-white/20'
+              ? 'text-white bg-white/10 border border-white/20 shadow-lg'
               : 'text-zinc-500 active:bg-white/5'
           }`}
         >
-          <Lightbulb size={24} className="sm:w-[26px] sm:h-[26px]" strokeWidth={1.5} />
-          <span className="text-[10px] font-medium tracking-wider sm:hidden">学习</span>
+          <Lightbulb size={22} className="sm:w-[26px] sm:h-[26px]" strokeWidth={1.5} />
+          <span className="text-[9px] font-medium tracking-wider sm:hidden">学习</span>
         </button>
       </div>
 

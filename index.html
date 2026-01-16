@@ -109,31 +109,42 @@
         .duration-500 {
             animation-duration: 500ms;
         }
-        
+
+        /* Mobile bottom navigation glow effect for active tab */
+        @media (max-width: 640px) {
+            .mobile-bottom-nav button.text-white {
+                box-shadow: 0 0 15px rgba(212, 0, 0, 0.3);
+            }
+        }
+
         /* Mobile specific adjustments */
         @media (max-width: 640px) {
             .mobile-bottom-nav {
-                height: 72px;
+                position: fixed !important;
+                height: 68px;
                 width: 100% !important;
                 flex-direction: row !important;
-                bottom: 0;
+                bottom: 0 !important;
                 top: auto !important;
                 left: 0 !important;
+                right: 0 !important;
                 border-right: none !important;
                 border-top: 1px solid rgba(255, 255, 255, 0.15);
-                padding: 8px 16px !important;
-                justify-content: space-around !important;
+                padding: 6px 12px !important;
+                justify-content: center !important;
+                align-items: center !important;
                 background: linear-gradient(to top, rgba(0, 0, 0, 0.98), rgba(0, 0, 0, 0.95));
                 backdrop-filter: blur(20px);
                 -webkit-backdrop-filter: blur(20px);
                 padding-bottom: env(safe-area-inset-bottom) !important;
-                height: calc(72px + env(safe-area-inset-bottom)) !important;
+                height: calc(68px + env(safe-area-inset-bottom)) !important;
                 box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
-                gap: 8px !important;
+                gap: 0 !important;
+                z-index: 9999 !important;
             }
             .main-content {
                 padding-left: 0 !important;
-                padding-bottom: calc(88px + env(safe-area-inset-bottom)) !important;
+                padding-bottom: calc(84px + env(safe-area-inset-bottom)) !important;
             }
             .mobile-stack {
                 flex-direction: column !important;
