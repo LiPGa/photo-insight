@@ -244,14 +244,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
 
       await new Promise((resolve) => setTimeout(resolve, 500));
 
-      // Reset state
-      setCurrentUpload(null);
-      clearResult();
-      setCurrentExif(null);
-      setUserNote('');
-      setSelectedTitle('');
-      setActiveTags([]);
-      // onNavigateToArchives();
+      // Keep current state so user can generate share card after saving
     } finally {
       setIsSaving(false);
     }
