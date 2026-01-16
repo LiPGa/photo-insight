@@ -18,6 +18,14 @@
             overflow-x: hidden;
             -webkit-tap-highlight-color: transparent;
             touch-action: manipulation; /* Disable double-tap zoom for faster taps */
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* Smooth scrolling for the entire app */
+        * {
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
         }
         /* Faster touch response on buttons */
         button, [role="button"], a {
@@ -76,28 +84,56 @@
             font-family: 'IBM Plex Mono', monospace;
             pointer-events: none;
         }
+
+        /* Smooth animations */
+        @keyframes fade-in {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes slide-up {
+            from { transform: translateY(10px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .animate-in {
+            animation-fill-mode: both;
+        }
+        .fade-in {
+            animation-name: fade-in;
+        }
+        .slide-up {
+            animation-name: slide-up;
+        }
+        .duration-300 {
+            animation-duration: 300ms;
+        }
+        .duration-500 {
+            animation-duration: 500ms;
+        }
         
         /* Mobile specific adjustments */
         @media (max-width: 640px) {
             .mobile-bottom-nav {
-                height: 80px; /* Increased for larger touch targets */
+                height: 72px;
                 width: 100% !important;
                 flex-direction: row !important;
                 bottom: 0;
                 top: auto !important;
                 left: 0 !important;
                 border-right: none !important;
-                border-top: 1px solid rgba(255, 255, 255, 0.1);
-                padding: 0 20px !important; /* More horizontal padding */
+                border-top: 1px solid rgba(255, 255, 255, 0.15);
+                padding: 8px 16px !important;
                 justify-content: space-around !important;
-                background: rgba(0, 0, 0, 0.95);
-                backdrop-filter: blur(15px);
+                background: linear-gradient(to top, rgba(0, 0, 0, 0.98), rgba(0, 0, 0, 0.95));
+                backdrop-filter: blur(20px);
+                -webkit-backdrop-filter: blur(20px);
                 padding-bottom: env(safe-area-inset-bottom) !important;
-                height: calc(80px + env(safe-area-inset-bottom)) !important;
+                height: calc(72px + env(safe-area-inset-bottom)) !important;
+                box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
+                gap: 8px !important;
             }
             .main-content {
                 padding-left: 0 !important;
-                padding-bottom: calc(95px + env(safe-area-inset-bottom)) !important; /* Match new nav height */
+                padding-bottom: calc(88px + env(safe-area-inset-bottom)) !important;
             }
             .mobile-stack {
                 flex-direction: column !important;

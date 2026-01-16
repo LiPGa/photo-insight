@@ -54,17 +54,18 @@ export const LearnView: React.FC<LearnViewProps> = ({
   });
 
   return (
-    <div className="flex-1 p-6 sm:p-8 overflow-auto">
-      <div className="max-w-4xl mx-auto space-y-8">
+    <div className="flex-1 p-5 sm:p-8 overflow-auto">
+      <div className="max-w-4xl mx-auto space-y-6 sm:space-y-8">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
           <div>
-            <h1 className="text-2xl font-light tracking-tight">Learn</h1>
+            <h1 className="text-2xl sm:text-3xl font-light tracking-tight">Learn</h1>
             <p className="text-sm text-zinc-500 mt-1">每日灵感与个性化学习</p>
           </div>
           <div className="flex items-center gap-2 text-xs text-zinc-500">
             <Calendar size={14} />
-            <span>{dateStr}</span>
+            <span className="hidden sm:inline">{dateStr}</span>
+            <span className="sm:hidden">{today.toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' })}</span>
           </div>
         </div>
 
@@ -82,25 +83,25 @@ export const LearnView: React.FC<LearnViewProps> = ({
             <div className="flex items-center justify-between px-2">
               <button
                 onClick={handlePrevPrompt}
-                className="p-2 text-zinc-500 hover:text-white hover:bg-white/5 rounded-full transition-colors"
+                className="p-3 text-zinc-500 active:text-white active:bg-white/10 rounded-full transition-all active:scale-95"
               >
-                <ChevronLeft size={20} />
+                <ChevronLeft size={22} />
               </button>
 
               <div className="text-center">
-                <div className="text-xs text-zinc-600">
+                <div className="text-sm font-medium text-zinc-400">
                   {browseIndex + 1} / {DAILY_PROMPTS.length}
                 </div>
-                <div className="text-xs text-zinc-500 mt-1">
-                  Browse all prompts
+                <div className="text-[10px] text-zinc-600 mt-0.5 tracking-wider uppercase">
+                  浏览所有主题
                 </div>
               </div>
 
               <button
                 onClick={handleNextPrompt}
-                className="p-2 text-zinc-500 hover:text-white hover:bg-white/5 rounded-full transition-colors"
+                className="p-3 text-zinc-500 active:text-white active:bg-white/10 rounded-full transition-all active:scale-95"
               >
-                <ChevronRight size={20} />
+                <ChevronRight size={22} />
               </button>
             </div>
 
