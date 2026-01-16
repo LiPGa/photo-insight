@@ -72,12 +72,12 @@ export const PhotoDetail: React.FC<PhotoDetailProps> = ({ entry, onBack }) => (
         </header>
 
         <div className="grid grid-cols-2 gap-x-8 gap-y-12">
-          <ScoreMeter score={entry.scores.composition} label="Composition" color="#e4e4e7" />
-          <ScoreMeter score={entry.scores.light} label="Light" color="#e4e4e7" />
-          <ScoreMeter score={entry.scores.color} label="Color" color="#e4e4e7" />
-          <ScoreMeter score={entry.scores.technical} label="Technical" color="#e4e4e7" />
+          <ScoreMeter score={entry.scores.composition} label="Composition" color="#D40000" />
+          <ScoreMeter score={entry.scores.light} label="Light" color="#D40000" />
+          <ScoreMeter score={entry.scores.color} label="Color" color="#D40000" />
+          <ScoreMeter score={entry.scores.technical} label="Technical" color="#D40000" />
           <div className="col-span-2">
-            <ScoreMeter score={entry.scores.expression} label="Expression" color="#e4e4e7" />
+            <ScoreMeter score={entry.scores.expression} label="Expression" color="#D40000" />
           </div>
         </div>
 
@@ -100,8 +100,8 @@ export const PhotoDetail: React.FC<PhotoDetailProps> = ({ entry, onBack }) => (
 
           {/* Evolution Strategy */}
           {entry.analysis?.improvement && (
-            <div className="p-6 bg-white/5 rounded-xl space-y-3">
-              <span className="text-xs text-zinc-400 font-bold tracking-widest uppercase flex items-center gap-2">
+            <div className="p-6 bg-black/40 border-l-2 border-[#D40000] rounded-sm space-y-3">
+              <span className="text-xs text-[#D40000] font-bold tracking-widest uppercase flex items-center gap-2">
                 <Lightbulb size={14} /> Improvement Strategy
               </span>
               <p className="text-base text-zinc-200 leading-relaxed font-light">
