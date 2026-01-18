@@ -12,6 +12,7 @@ import {
   ChevronUp,
 } from 'lucide-react';
 import { ScoreMeter } from '../ui/ScoreMeter';
+import { ScoreCelebration } from '../ui/ScoreCelebration';
 import { DetailedScores, DetailedAnalysis } from '../../types';
 
 // Haptic feedback for mobile - subtle vibration on key actions
@@ -216,17 +217,29 @@ export const ResultPanel: React.FC<ResultPanelProps> = ({
 
           {/* Scores */}
           <div className="grid grid-cols-2 gap-x-12 gap-y-16">
-            <ScoreMeter score={currentResult.scores.composition} label="构图" color="#D40000" />
-            <ScoreMeter score={currentResult.scores.light} label="光影" color="#D40000" />
-            <ScoreMeter score={currentResult.scores.color} label="色彩" color="#D40000" />
-            <ScoreMeter score={currentResult.scores.technical} label="技术" color="#D40000" />
+            <ScoreCelebration score={currentResult.scores.composition} variant="subtle">
+              <ScoreMeter score={currentResult.scores.composition} label="构图" color="#D40000" />
+            </ScoreCelebration>
+            <ScoreCelebration score={currentResult.scores.light} variant="subtle">
+              <ScoreMeter score={currentResult.scores.light} label="光影" color="#D40000" />
+            </ScoreCelebration>
+            <ScoreCelebration score={currentResult.scores.color} variant="subtle">
+              <ScoreMeter score={currentResult.scores.color} label="色彩" color="#D40000" />
+            </ScoreCelebration>
+            <ScoreCelebration score={currentResult.scores.technical} variant="subtle">
+              <ScoreMeter score={currentResult.scores.technical} label="技术" color="#D40000" />
+            </ScoreCelebration>
             <div className="col-span-2">
-              <ScoreMeter score={currentResult.scores.expression} label="表达" color="#D40000" />
+              <ScoreCelebration score={currentResult.scores.expression} variant="subtle">
+                <ScoreMeter score={currentResult.scores.expression} label="表达" color="#D40000" />
+              </ScoreCelebration>
             </div>
           </div>
 
           <div className="pt-10 border-t border-white/10">
-            <ScoreMeter score={currentResult.scores.overall} label="综合评分" color="#fff" />
+            <ScoreCelebration score={currentResult.scores.overall} variant="full">
+              <ScoreMeter score={currentResult.scores.overall} label="综合评分" color="#fff" />
+            </ScoreCelebration>
           </div>
 
           {/* Analysis */}
