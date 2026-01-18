@@ -72,7 +72,7 @@ export const ResultPanel: React.FC<ResultPanelProps> = ({
           <div className="w-2 h-2 bg-[#D40000] rounded-full"></div>
           <span className="mono text-xs font-bold tracking-widest text-zinc-500">AI_POWERED</span>
         </div>
-        <h2 className="text-5xl font-black tracking-tight leading-none">Photo Insight</h2>
+        <h2 className="text-5xl font-black tracking-tight leading-none">知影 Photo Insight</h2>
       </header>
 
       {!currentResult ? (

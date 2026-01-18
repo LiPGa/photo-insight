@@ -8,6 +8,7 @@ interface ArchivesViewProps {
   selectedEntry: PhotoEntry | null;
   onSelectEntry: (entry: PhotoEntry | null) => void;
   isLoading?: boolean;
+  onDeleteEntry?: (entryId: string) => Promise<void>;
 }
 
 export const ArchivesView: React.FC<ArchivesViewProps> = ({
@@ -15,6 +16,7 @@ export const ArchivesView: React.FC<ArchivesViewProps> = ({
   selectedEntry,
   onSelectEntry,
   isLoading,
+  onDeleteEntry,
 }) => {
   const stats = React.useMemo(() => {
     if (!entries.length) return null;
@@ -122,7 +124,11 @@ export const ArchivesView: React.FC<ArchivesViewProps> = ({
   return (
     <div className="p-8 sm:p-20 lg:p-24 max-w-7xl animate-in fade-in duration-1000 mx-auto w-full">
       {selectedEntry ? (
-        <PhotoDetail entry={selectedEntry} onBack={() => onSelectEntry(null)} />
+        <PhotoDetail 
+          entry={selectedEntry} 
+          onBack={() => onSelectEntry(null)} 
+          onDelete={onDeleteEntry}
+        />
       ) : (
         <div className="space-y-24">
           {/* Header */}

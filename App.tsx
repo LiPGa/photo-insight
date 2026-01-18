@@ -5,7 +5,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { AuthModal } from './components/AuthModal';
 import { Sidebar } from './components/layout/Sidebar';
 import { UserStatusBar } from './components/layout/UserStatusBar';
-import { getUserPhotoEntries } from './services/dataService';
+import { getUserPhotoEntries, deletePhotoEntry } from './services/dataService';
 
 // 懒加载视图组件
 const EvaluationView = lazy(() => import('./components/evaluation/EvaluationView').then(m => ({ default: m.EvaluationView })));
@@ -89,6 +89,18 @@ const AppContent: React.FC = () => {
     });
   };
 
+  const handleDeleteEntry = async (entryId: string) => {
+    const success = await deletePhotoEntry(entryId);
+    if (success) {
+      startTransition(() => {
+        setEntries((prev) => prev.filter((e) => e.id !== entryId));
+        if (selectedEntry?.id === entryId) {
+          setSelectedEntry(null);
+        }
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-black text-zinc-100 selection:bg-[#D40000] selection:text-white pb-24 sm:pb-0">
       {/* Sidebar / Bottom Nav */}
@@ -129,6 +141,7 @@ const AppContent: React.FC = () => {
               selectedEntry={selectedEntry}
               onSelectEntry={handleSelectEntry}
               isLoading={isLoadingEntries}
+              onDeleteEntry={handleDeleteEntry}
             />
           </div>
 

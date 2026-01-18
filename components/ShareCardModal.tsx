@@ -158,7 +158,7 @@ const renderShareCardCanvas = async (
   // App name
   ctx.fillStyle = GRAY_400;
   ctx.font = '500 24px -apple-system, BlinkMacSystemFont, sans-serif';
-  ctx.fillText('PhotoInsight', PADDING + 64, y + 34);
+  ctx.fillText('知影 PhotoInsight', PADDING + 64, y + 34);
 
   // Lens Insight text
   ctx.fillStyle = GRAY_600;

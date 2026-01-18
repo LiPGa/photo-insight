@@ -1,25 +1,70 @@
-import React from 'react';
-import { ArrowLeft, Camera, Lightbulb } from 'lucide-react';
+import React, { useState } from 'react';
+import { ArrowLeft, Camera, Lightbulb, Trash2 } from 'lucide-react';
 import { PhotoEntry } from '../../types';
 import { ScoreMeter } from '../ui/ScoreMeter';
 import { Histogram } from '../ui/Histogram';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
 
 interface PhotoDetailProps {
   entry: PhotoEntry;
   onBack: () => void;
+  onDelete?: (id: string) => Promise<void>;
 }
 
-export const PhotoDetail: React.FC<PhotoDetailProps> = ({ entry, onBack }) => (
+export const PhotoDetail: React.FC<PhotoDetailProps> = ({ entry, onBack, onDelete }) => {
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    if (!onDelete) return;
+    
+    setIsDeleting(true);
+    try {
+      await onDelete(entry.id);
+    } catch (error) {
+      console.error('Failed to delete:', error);
+      setIsDeleting(false);
+    }
+    // No need to close dialog or reset isDeleting if successful, as component will unmount
+  };
+
+  return (
   <div className="space-y-16 animate-in fade-in slide-in-from-bottom-4 duration-500">
-    <button
-      onClick={onBack}
-      className="group flex items-center gap-3 text-sm text-zinc-500 hover:text-white transition-colors pl-1"
-    >
-      <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-white/10 transition-colors">
-        <ArrowLeft size={16} className="group-hover:-translate-x-0.5 transition-transform" />
-      </div>
-      <span className="font-medium tracking-wide">Back to Timeline</span>
-    </button>
+    <div className="flex items-center justify-between">
+      <button
+        onClick={onBack}
+        className="group flex items-center gap-3 text-sm text-zinc-500 hover:text-white transition-colors pl-1"
+      >
+        <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-white/10 transition-colors">
+          <ArrowLeft size={16} className="group-hover:-translate-x-0.5 transition-transform" />
+        </div>
+        <span className="font-medium tracking-wide">Back to Timeline</span>
+      </button>
+
+      {onDelete && (
+        <button
+          onClick={() => setShowDeleteDialog(true)}
+          className="group flex items-center gap-2 text-sm text-zinc-500 hover:text-red-500 transition-colors pr-1"
+        >
+          <span className="font-medium tracking-wide opacity-0 group-hover:opacity-100 transition-opacity">Delete</span>
+          <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-red-500/10 transition-colors">
+            <Trash2 size={16} className="transition-transform" />
+          </div>
+        </button>
+      )}
+    </div>
+
+    <ConfirmDialog
+      isOpen={showDeleteDialog}
+      onClose={() => setShowDeleteDialog(false)}
+      onConfirm={handleDelete}
+      title="删除照片"
+      message="确定要删除这张照片吗？此操作无法撤销。"
+      confirmText="删除"
+      cancelText="取消"
+      isDestructive
+      isLoading={isDeleting}
+    />
 
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20">
       {/* Image Column */}
@@ -122,4 +167,5 @@ export const PhotoDetail: React.FC<PhotoDetailProps> = ({ entry, onBack }) => (
       </div>
     </div>
   </div>
-);
+  );
+};
