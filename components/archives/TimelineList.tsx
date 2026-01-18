@@ -1,8 +1,18 @@
-import React, { memo, useState, useEffect, useRef } from 'react';
-import { ChevronRight } from 'lucide-react';
+import React, { memo, useState, useEffect, useRef, useCallback, createContext, useContext } from 'react';
+import { ChevronRight, Star } from 'lucide-react';
 import { PhotoEntry } from '../../types';
 import { getThumbnailUrl, isCloudinaryUrl } from '../../services/cloudinaryService';
 import { useThumbnail } from '../../hooks/useThumbnail';
+import { ProgressSpine } from './ProgressSpine';
+
+// Context for entry refs (to enable scroll-to functionality)
+const EntryRefsContext = createContext<{
+  registerRef: (id: string, ref: HTMLDivElement | null) => void;
+  personalBestId: string | null;
+}>({
+  registerRef: () => {},
+  personalBestId: null
+});
 
 // Skeleton loader for initial timeline loading
 const TimelineSkeleton = () => (
@@ -41,6 +51,15 @@ const TimelineEntry = memo(({
   onSelect: () => void;
   isVisible: boolean;
 }) => {
+  const { registerRef, personalBestId } = useContext(EntryRefsContext);
+  const entryRef = useRef<HTMLDivElement>(null);
+
+  // Register ref for scroll-to functionality
+  useEffect(() => {
+    registerRef(entry.id, entryRef.current);
+    return () => registerRef(entry.id, null);
+  }, [entry.id, registerRef]);
+
   // 如果是 Cloudinary URL，直接用 URL 变换生成缩略图（零延迟）
   const isCloudinary = isCloudinaryUrl(entry.imageUrl);
   const cloudinaryThumb = isCloudinary ? getThumbnailUrl(entry.imageUrl, 200) : null;
@@ -54,20 +73,40 @@ const TimelineEntry = memo(({
 
   const thumbnailSrc = cloudinaryThumb || localThumb;
 
-  // Determine score color based on value
-  const scoreColor = (entry.scores.overall || 0) >= 7.5
+  // Determine score color and accent based on value
+  const score = entry.scores.overall || 0;
+  const isHighScore = score >= 7.5;
+  const isPersonalBest = entry.id === personalBestId;
+
+  const scoreColor = isHighScore
     ? 'text-[#D40000]'
-    : (entry.scores.overall || 0) >= 6.0
+    : score >= 6.0
     ? 'text-zinc-400'
     : 'text-zinc-500';
 
+  // Left border accent based on score
+  const borderAccent = isHighScore
+    ? 'border-l-[3px] border-l-[#D40000]'
+    : 'border-l-[3px] border-l-zinc-800';
+
   return (
     <div
+      ref={entryRef}
       onClick={onSelect}
-      className="group flex gap-6 p-4 rounded-2xl hover:bg-white/5 transition-all duration-300 cursor-pointer border border-transparent hover:border-[#D40000]/10"
+      className={`
+        group flex gap-6 p-4 rounded-2xl rounded-l-none
+        hover:bg-white/5 transition-all duration-300 cursor-pointer
+        border border-transparent hover:border-[#D40000]/10
+        ${borderAccent}
+        ${isPersonalBest ? 'bg-[#D40000]/5 hover:bg-[#D40000]/10' : ''}
+      `}
     >
       {/* Thumbnail */}
-      <div className="w-24 h-24 sm:w-32 sm:h-32 bg-zinc-900 rounded-xl overflow-hidden flex-shrink-0 shadow-lg shadow-black/20 ring-1 ring-white/5 group-hover:ring-[#D40000]/30 transition-all">
+      <div className={`
+        w-24 h-24 sm:w-32 sm:h-32 bg-zinc-900 rounded-xl overflow-hidden flex-shrink-0
+        shadow-lg shadow-black/20 ring-1 ring-white/5 group-hover:ring-[#D40000]/30 transition-all
+        ${isPersonalBest ? 'ring-2 ring-amber-500/50' : ''}
+      `}>
         {(!isCloudinary && loading) || !thumbnailSrc ? (
           <div className="w-full h-full bg-zinc-800 animate-pulse" />
         ) : (
@@ -83,19 +122,24 @@ const TimelineEntry = memo(({
       {/* Info */}
       <div className="flex-grow min-w-0 flex flex-col justify-center py-2">
         <div className="space-y-1">
-          <div className="flex items-center justify-between">
-            <span className="text-lg font-medium text-zinc-200 truncate group-hover:text-white transition-colors">
-              {entry.title || 'Untitled'}
-            </span>
-            <span className={`text-xl font-light ${scoreColor} group-hover:text-[#D40000] transition-colors mono`}>
-              {entry.scores.overall?.toFixed(1)}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-lg font-medium text-zinc-200 truncate group-hover:text-white transition-colors">
+                {entry.title || 'Untitled'}
+              </span>
+              {isPersonalBest && (
+                <Star size={14} className="text-amber-500 fill-amber-500 flex-shrink-0" />
+              )}
+            </div>
+            <span className={`text-xl font-light ${scoreColor} group-hover:text-[#D40000] transition-colors mono flex-shrink-0`}>
+              {score.toFixed(1)}
             </span>
           </div>
 
           <div className="flex items-center gap-3 text-xs text-zinc-500 font-medium tracking-wide uppercase">
             <span>{entry.date?.split('.')[2] || ''}</span>
             <span className="w-1 h-1 rounded-full bg-zinc-700" />
-            <span>{entry.params?.camera}</span>
+            <span className="truncate">{entry.params?.camera}</span>
           </div>
         </div>
 
@@ -158,6 +202,45 @@ interface TimelineListProps {
 }
 
 export const TimelineList: React.FC<TimelineListProps> = ({ entries, onSelectEntry, isLoading }) => {
+  // Ref map for scroll-to functionality
+  const entryRefsMap = useRef<Map<string, HTMLDivElement | null>>(new Map());
+  const [activeEntryId, setActiveEntryId] = useState<string | undefined>();
+
+  // Calculate personal best
+  const personalBestId = React.useMemo(() => {
+    if (entries.length === 0) return null;
+    return entries.reduce((bestId, entry) => {
+      const currentBest = entries.find(e => e.id === bestId);
+      if (!currentBest) return entry.id;
+      return (entry.scores.overall || 0) > (currentBest.scores.overall || 0) ? entry.id : bestId;
+    }, entries[0]?.id);
+  }, [entries]);
+
+  // Register ref callback
+  const registerRef = useCallback((id: string, ref: HTMLDivElement | null) => {
+    if (ref) {
+      entryRefsMap.current.set(id, ref);
+    } else {
+      entryRefsMap.current.delete(id);
+    }
+  }, []);
+
+  // Jump to entry handler
+  const handleJumpToEntry = useCallback((entryId: string) => {
+    const element = entryRefsMap.current.get(entryId);
+    if (element) {
+      // Highlight briefly
+      setActiveEntryId(entryId);
+      setTimeout(() => setActiveEntryId(undefined), 2000);
+
+      // Scroll into view with offset for sticky header
+      element.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center'
+      });
+    }
+  }, []);
+
   // Show skeleton while loading
   if (isLoading) {
     return <TimelineSkeleton />;
@@ -181,39 +264,53 @@ export const TimelineList: React.FC<TimelineListProps> = ({ entries, onSelectEnt
   });
 
   return (
-    <div className="relative pl-4 sm:pl-0">
-      {/* Timeline line */}
-      <div className="absolute left-8 sm:left-[3.25rem] top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-[#D40000]/20 to-transparent" />
+    <EntryRefsContext.Provider value={{ registerRef, personalBestId }}>
+      <div className="relative">
+        {/* Progress Spine - sticky horizontal visualization */}
+        {entries.length > 1 && (
+          <ProgressSpine
+            entries={entries}
+            onJumpToEntry={handleJumpToEntry}
+            activeEntryId={activeEntryId}
+          />
+        )}
 
-      {Object.entries(groupedEntries)
-        .sort(([monthA], [monthB]) => {
-          if (monthA === '未知日期') return 1;
-          if (monthB === '未知日期') return -1;
-          return monthB.localeCompare(monthA, undefined, { numeric: true });
-        })
-        .map(([month, monthEntries]: [string, PhotoEntry[]]) => (
-        <div key={month} className="mb-20 last:mb-0 relative">
-          {/* Month header */}
-          <div className="flex items-center gap-6 mb-8 pl-0 sm:pl-8 sticky top-4 z-10">
-            <div className="w-2.5 h-2.5 bg-[#D40000] rounded-full ring-4 ring-[#09090b] relative z-10 ml-[1.15rem] sm:ml-0.5 shadow-lg shadow-[#D40000]/50" />
-            <div className="flex items-baseline gap-3 backdrop-blur-md bg-[#09090b]/80 py-1 pr-4 rounded-full border border-white/5">
-              <span className="text-xl font-light text-zinc-100 tracking-tight">{month}</span>
-              <span className="text-xs text-zinc-600 font-medium uppercase tracking-wider">{monthEntries.length} Photos</span>
+        {/* Timeline content */}
+        <div className="relative pl-4 sm:pl-0 pt-8">
+          {/* Timeline line */}
+          <div className="absolute left-8 sm:left-[3.25rem] top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-[#D40000]/20 to-transparent" />
+
+          {Object.entries(groupedEntries)
+            .sort(([monthA], [monthB]) => {
+              if (monthA === '未知日期') return 1;
+              if (monthB === '未知日期') return -1;
+              return monthB.localeCompare(monthA, undefined, { numeric: true });
+            })
+            .map(([month, monthEntries]: [string, PhotoEntry[]]) => (
+            <div key={month} className="mb-20 last:mb-0 relative">
+              {/* Month header */}
+              <div className="flex items-center gap-6 mb-8 pl-0 sm:pl-8 sticky top-[140px] z-10">
+                <div className="w-2.5 h-2.5 bg-[#D40000] rounded-full ring-4 ring-[#09090b] relative z-10 ml-[1.15rem] sm:ml-0.5 shadow-lg shadow-[#D40000]/50" />
+                <div className="flex items-baseline gap-3 backdrop-blur-md bg-[#09090b]/80 py-1 pr-4 rounded-full border border-white/5">
+                  <span className="text-xl font-light text-zinc-100 tracking-tight">{month}</span>
+                  <span className="text-xs text-zinc-600 font-medium uppercase tracking-wider">{monthEntries.length} Photos</span>
+                </div>
+              </div>
+
+              {/* Month entries */}
+              <div className="pl-8 sm:pl-20 space-y-2">
+                {monthEntries.map((entry) => (
+                  <LazyEntry
+                    key={entry.id}
+                    entry={entry}
+                    onSelect={() => onSelectEntry(entry)}
+                  />
+                ))}
+              </div>
             </div>
-          </div>
-
-          {/* Month entries */}
-          <div className="pl-8 sm:pl-20 space-y-2">
-            {monthEntries.map((entry) => (
-              <LazyEntry
-                key={entry.id}
-                entry={entry}
-                onSelect={() => onSelectEntry(entry)}
-              />
-            ))}
-          </div>
+          ))}
         </div>
-      ))}
-    </div>
+      </div>
+    </EntryRefsContext.Provider>
   );
 };
