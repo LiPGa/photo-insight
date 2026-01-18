@@ -158,7 +158,7 @@ const renderShareCardCanvas = async (
   // App name
   ctx.fillStyle = GRAY_400;
   ctx.font = '500 24px -apple-system, BlinkMacSystemFont, sans-serif';
-  ctx.fillText('PhotoPath', PADDING + 64, y + 34);
+  ctx.fillText('PhotoInsight', PADDING + 64, y + 34);
 
   // Lens Insight text
   ctx.fillStyle = GRAY_600;
@@ -407,7 +407,7 @@ const renderShareCardCanvas = async (
   ctx.fillText(`AI 摄影点评 · ${new Date().toLocaleDateString('zh-CN')}`, PADDING, y);
 
   ctx.textAlign = 'right';
-  ctx.fillText('photopath.app', WIDTH - PADDING, y);
+  ctx.fillText('photoinsight.app', WIDTH - PADDING, y);
   ctx.textAlign = 'left';
 
   // Export as JPEG for speed
@@ -429,7 +429,7 @@ const dataURLtoBlob = (dataURL: string): Blob => {
 
 // Helper function to download the image
 const downloadImage = async (imageUrl: string, title: string): Promise<boolean> => {
-  const fileName = `photopath_${title || 'insight'}_${Date.now()}.jpg`;
+  const fileName = `photoinsight_${title || 'insight'}_${Date.now()}.jpg`;
 
   try {
     const blob = dataURLtoBlob(imageUrl);

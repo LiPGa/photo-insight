@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-const THUMBNAIL_CACHE_KEY = 'photopath_thumbnails';
+const THUMBNAIL_CACHE_KEY = 'photoinsight_thumbnails';
 const THUMBNAIL_SIZE = 200; // 缩略图最大尺寸
 
 // 生成缩略图

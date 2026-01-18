@@ -1,5 +1,5 @@
 {
-  "name": "PhotoPath - Photography Progress Tracker",
+  "name": "PhotoInsight - Photography Progress Tracker",
   "description": "A comprehensive mobile-first photography diary to track your growth, get AI critiques, and build an inspiration library.",
   "requestFramePermissions": [
     "camera"

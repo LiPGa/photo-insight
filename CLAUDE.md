@@ -39,7 +39,7 @@ VITE_CLOUDINARY_UPLOAD_PRESET=your_upload_preset
 
 ## Architecture
 
-This is a React 19 + TypeScript photography progress tracking app ("PhotoPath") built with Vite. It uses the Gemini AI API for photo analysis and critique.
+This is a React 19 + TypeScript photography progress tracking app ("PhotoInsight") built with Vite. It uses the Gemini AI API for photo analysis and critique.
 
 ### Core Flow
 

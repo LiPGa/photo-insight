@@ -4,7 +4,7 @@ This file provides guidance to the Gemini AI assistant when working with the cod
 
 ## Project Overview
 
-This is a React 19 + TypeScript photography progress tracking app ("PhotoPath") built with Vite. It uses the Gemini AI API for photo analysis and critique.
+This is a React 19 + TypeScript photography progress tracking app ("PhotoInsight") built with Vite. It uses the Gemini AI API for photo analysis and critique.
 
 The application allows users to upload photos, receive an AI-powered analysis of their work, and track their progress over time. The analysis includes scores on a 10-point scale for various photographic elements, as well as qualitative feedback and suggestions for improvement.
 

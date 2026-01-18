@@ -1,5 +1,5 @@
 -- =============================================
--- PhotoPath Supabase 数据库设置
+-- PhotoInsight Supabase 数据库设置
 -- 在 Supabase Dashboard → SQL Editor 中运行
 -- =============================================
 

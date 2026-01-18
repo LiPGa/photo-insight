@@ -1,7 +1,7 @@
 import { MAX_FILE_SIZE } from '../constants';
 
 const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || 'dvmjukj2e';
-const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || 'photopath';
+const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || 'photoinsight';
 
 // Cloudinary file limits (Cloudinary free tier supports up to 20MB for images, setting to 15MB for safety)
 // Use the same limit as UI validation to avoid mismatches
@@ -33,7 +33,7 @@ export async function uploadImage(file: File): Promise<UploadResult> {
   const formData = new FormData();
   formData.append('file', file);
   formData.append('upload_preset', UPLOAD_PRESET);
-  formData.append('folder', 'photopath');
+  formData.append('folder', 'photoinsight');
 
   const uploadUrl = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`;
 
@@ -123,7 +123,7 @@ export async function uploadBase64(base64: string): Promise<UploadResult> {
   const formData = new FormData();
   formData.append('file', base64);
   formData.append('upload_preset', UPLOAD_PRESET);
-  formData.append('folder', 'photopath');
+  formData.append('folder', 'photoinsight');
 
   const response = await fetch(
     `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
