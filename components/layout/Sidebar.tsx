@@ -28,8 +28,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   return (
     <nav className="fixed left-0 top-0 h-full w-20 border-r border-white/5 flex flex-col items-center py-10 gap-16 z-50 bg-black mobile-bottom-nav">
       {/* Logo */}
-      <div className="w-10 h-10 bg-[#D40000] flex items-center justify-center font-black text-xs hidden sm:flex cursor-default shadow-[0_0_15px_rgba(212,0,0,0.3)]">
-        AP
+      <div className="w-10 h-10 bg-[#D40000] flex items-center justify-center hidden sm:flex cursor-default shadow-[0_0_15px_rgba(212,0,0,0.3)]">
+        <img src="/favicon.svg" alt="App Logo" className="w-6 h-6" style={{ imageRendering: 'pixelated' }} />
       </div>
 
       {/* Navigation buttons - horizontal on mobile, vertical on desktop */}
