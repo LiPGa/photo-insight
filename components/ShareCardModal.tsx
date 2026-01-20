@@ -84,334 +84,300 @@ const renderShareCardCanvas = async (
   scores: DetailedScores,
   analysis: DetailedAnalysis
 ): Promise<string> => {
-  // Canvas dimensions
-  const WIDTH = 800;
-  const PADDING = 48;
-  const CONTENT_WIDTH = WIDTH - PADDING * 2;
-
-  // Colors
-  const BG_COLOR = '#0a0a0a';
-  const RED = '#D40000';
+  // Config: Xiaohongshu/Instagram Portrait Ratio (Target ~3:4 or longer)
+  const WIDTH = 1080;
+  const PADDING = 72;
+  const BG_COLOR = '#0a0a0a'; // Deep Black
+  const CARD_BG = '#141414';  // Slightly lighter panel
+  const RED = '#ff4d4f';      // Accent Red
+  const GOLD = '#D4AF37';     // Gold for high scores
   const WHITE = '#ffffff';
-  const GRAY_300 = '#d4d4d8';
-  const GRAY_400 = '#a1a1aa';
-  const GRAY_500 = '#71717a';
-  const GRAY_600 = '#52525b';
-  const GRAY_800 = '#27272a';
-  const GRAY_900 = '#18181b';
+  const TEXT_SECONDARY = '#a3a3a3';
+  
+  // --- Score Tier Logic ---
+  const getScoreTier = (score: number) => {
+    if (score >= 9.0) return { label: '✦ 传世之作', color: GOLD, text: '#000000' };
+    if (score >= 8.0) return { label: '◈ 大师作品', color: '#E0E0E0', text: '#000000' }; // Platinum
+    if (score >= 7.0) return { label: '◎ 精彩瞬间', color: RED, text: '#FFFFFF' };
+    if (score >= 6.0) return { label: '○ 值得记录', color: '#525252', text: '#FFFFFF' };
+    return { label: '· 继续探索', color: '#262626', text: '#808080' };
+  };
+  const tier = getScoreTier(scores.overall);
 
-  // Load image first
+  // Load image
   const photo = await loadImage(imageSrc);
 
-  // Calculate photo dimensions (4:3 aspect ratio, fit width)
-  const photoWidth = CONTENT_WIDTH;
-  const photoHeight = photoWidth * 0.75;
+  // --- Layout Calculations ---
+  // 1. Image Section
+  // Fit width (minus padding), dynamic height but capped
+  const displayWidth = WIDTH - (PADDING * 2);
+  const photoAspect = photo.width / photo.height;
+  let displayHeight = displayWidth / photoAspect;
+  
+  // Cap height at 1:1.25 ratio to prevent super tall images pushing content off
+  if (displayHeight > displayWidth * 1.25) {
+    displayHeight = displayWidth * 1.25;
+  }
 
-  // Create temporary canvas to measure text heights
+  // 2. Text Prep (Diagnosis Only)
   const tempCanvas = document.createElement('canvas');
   const tempCtx = tempCanvas.getContext('2d')!;
-  tempCtx.font = '28px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  
+  let shortDiagnosis = analysis.diagnosis || '';
+  // Truncate if extremely long (keep mostly intact as it's the only text now)
+  if (shortDiagnosis.length > 120) {
+      shortDiagnosis = shortDiagnosis.substring(0, 118) + '...';
+  }
+  
+  tempCtx.font = '500 42px -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif';
+  const diagnosisLines = wrapText(tempCtx, shortDiagnosis, displayWidth - 40);
 
-  // Pre-calculate text sections
-  const diagnosisLines = wrapText(tempCtx, analysis.diagnosis || '', CONTENT_WIDTH);
-  const improvementLines = wrapText(tempCtx, analysis.improvement || '', CONTENT_WIDTH - 32);
-  const storyLines = analysis.storyNote ? wrapText(tempCtx, analysis.storyNote, CONTENT_WIDTH) : [];
-  const moodLines = analysis.moodNote ? wrapText(tempCtx, analysis.moodNote, CONTENT_WIDTH) : [];
+  // --- Height Summation ---
+  let currentY = PADDING;
+  currentY += displayHeight; // Photo
+  currentY += 60; // Gap
+  currentY += 160; // Title & Score Row
+  
+  if (tags.length > 0) currentY += 100; // Tags
+  
+  if (exif) currentY += 120; // EXIF
+  
+  currentY += 340; // Dimension Scores Grid (Generous space)
+  
+  // Diagnosis Box
+  const diagBoxHeight = (diagnosisLines.length * 64) + 100; 
+  currentY += diagBoxHeight;
+  
+  currentY += 180; // Footer
+  
+  const TOTAL_HEIGHT = currentY;
 
-  // Calculate total height
-  let totalHeight = 0;
-  totalHeight += 80;  // Header
-  totalHeight += 16 + photoHeight + 16; // Photo section
-  totalHeight += 60 + (tags.length > 0 ? 40 : 0); // Title + tags
-  totalHeight += exif ? 50 : 0; // EXIF
-  totalHeight += 200; // Scores section
-  totalHeight += 60 + diagnosisLines.length * 36; // Diagnosis
-  totalHeight += 80 + improvementLines.length * 36; // Improvement box
-  totalHeight += storyLines.length > 0 ? 40 + storyLines.length * 32 : 0;
-  totalHeight += moodLines.length > 0 ? 40 + moodLines.length * 32 : 0;
-  totalHeight += 60; // Footer
-  totalHeight += 40; // Extra padding
-
-  // Create main canvas
+  // --- Draw ---
   const canvas = document.createElement('canvas');
   canvas.width = WIDTH;
-  canvas.height = totalHeight;
+  canvas.height = TOTAL_HEIGHT;
   const ctx = canvas.getContext('2d')!;
 
   // Background
   ctx.fillStyle = BG_COLOR;
-  ctx.fillRect(0, 0, WIDTH, totalHeight);
+  ctx.fillRect(0, 0, WIDTH, TOTAL_HEIGHT);
 
-  let y = 0;
+  let y = PADDING;
 
-  // === Header ===
-  y += 32;
-  // Logo box
-  ctx.fillStyle = RED;
-  ctx.beginPath();
-  ctx.roundRect(PADDING, y, 48, 48, 8);
-  ctx.fill();
-  ctx.fillStyle = WHITE;
-  ctx.font = 'bold 16px -apple-system, BlinkMacSystemFont, sans-serif';
-  ctx.fillText('AP', PADDING + 12, y + 32);
-
-  // App name
-  ctx.fillStyle = GRAY_400;
-  ctx.font = '500 24px -apple-system, BlinkMacSystemFont, sans-serif';
-  ctx.fillText('知影 PhotoInsight', PADDING + 64, y + 34);
-
-  // Lens Insight text
-  ctx.fillStyle = GRAY_600;
-  ctx.font = '20px "IBM Plex Mono", monospace';
-  ctx.textAlign = 'right';
-  ctx.fillText('Lens Insight', WIDTH - PADDING, y + 34);
-  ctx.textAlign = 'left';
-
-  y += 48;
-
-  // Header border
-  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(PADDING, y);
-  ctx.lineTo(WIDTH - PADDING, y);
-  ctx.stroke();
-
-  // === Photo ===
-  y += 16;
+  // 1. Photo
   ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.5)';
+  ctx.shadowBlur = 40;
+  ctx.shadowOffsetY = 20;
+  
   ctx.beginPath();
-  ctx.roundRect(PADDING, y, photoWidth, photoHeight, 12);
+  ctx.roundRect(PADDING, y, displayWidth, displayHeight, 24);
+  ctx.fillStyle = '#1a1a1a';
+  ctx.fill();
   ctx.clip();
-
-  // Draw photo with cover fit
-  const imgRatio = photo.width / photo.height;
-  const targetRatio = photoWidth / photoHeight;
-  let sx = 0, sy = 0, sw = photo.width, sh = photo.height;
-
-  if (imgRatio > targetRatio) {
-    sw = photo.height * targetRatio;
-    sx = (photo.width - sw) / 2;
-  } else {
-    sh = photo.width / targetRatio;
-    sy = (photo.height - sh) / 2;
-  }
-
-  ctx.drawImage(photo, sx, sy, sw, sh, PADDING, y, photoWidth, photoHeight);
+  
+  // Draw Image (Center Crop/Fit)
+  const sWidth = photo.width;
+  const sHeight = (photo.width / displayWidth) * displayHeight;
+  const sY = (photo.height - sHeight) / 2;
+  ctx.drawImage(photo, 0, sY, sWidth, sHeight, PADDING, y, displayWidth, displayHeight);
+  ctx.restore();
+  
+  // Watermark
+  ctx.save();
+  ctx.fillStyle = 'rgba(255,255,255,0.8)';
+  ctx.font = 'bold 24px "IBM Plex Mono", monospace';
+  ctx.textAlign = 'right';
+  ctx.shadowColor = 'rgba(0,0,0,0.5)';
+  ctx.shadowBlur = 4;
+  ctx.fillText('PhotoInsight', WIDTH - PADDING - 20, y + displayHeight - 20);
   ctx.restore();
 
-  y += photoHeight + 24;
+  y += displayHeight + 60;
 
-  // === Title ===
+  // 2. Title & Big Score
+  // Title Left
+  ctx.textAlign = 'left';
   ctx.fillStyle = WHITE;
-  ctx.font = 'bold 36px -apple-system, BlinkMacSystemFont, sans-serif';
-  ctx.fillText(title || '未命名作品', PADDING, y);
-  y += 16;
-
-  // === Tags ===
-  if (tags.length > 0) {
-    y += 12;
-    let tagX = PADDING;
-    ctx.font = '20px -apple-system, BlinkMacSystemFont, sans-serif';
-    for (const tag of tags.slice(0, 3)) {
-      const tagWidth = ctx.measureText(tag).width + 16;
-      ctx.fillStyle = GRAY_900;
-      ctx.beginPath();
-      ctx.roundRect(tagX, y, tagWidth, 28, 4);
-      ctx.fill();
-      ctx.fillStyle = GRAY_500;
-      ctx.fillText(tag, tagX + 8, y + 20);
-      tagX += tagWidth + 8;
-    }
-    y += 40;
+  ctx.font = 'bold 64px -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif';
+  let drawTitle = title || 'UNTITLED';
+  // Truncate title
+  if (ctx.measureText(drawTitle).width > displayWidth - 350) {
+      drawTitle = drawTitle.substring(0, 8) + '...';
   }
+  ctx.fillText(drawTitle, PADDING, y + 50);
 
-  // Border
-  y += 8;
-  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
-  ctx.beginPath();
-  ctx.moveTo(PADDING, y);
-  ctx.lineTo(WIDTH - PADDING, y);
-  ctx.stroke();
+  // Score Right (Massive)
+  const scoreText = scores.overall.toFixed(1);
+  ctx.textAlign = 'right';
+  ctx.fillStyle = tier.color === GOLD ? GOLD : RED; // Use Gold for top tier, Red for others
+  ctx.font = '800 140px "IBM Plex Mono", monospace'; 
+  ctx.fillText(scoreText, WIDTH - PADDING, y + 60);
 
-  // === EXIF ===
-  if (exif) {
-    y += 24;
-    ctx.fillStyle = GRAY_500;
-    ctx.font = '20px -apple-system, BlinkMacSystemFont, sans-serif';
-    const exifParts = [exif.camera, exif.aperture, exif.shutterSpeed, exif.iso].filter(Boolean);
-    ctx.fillText(exifParts.join('  ·  '), PADDING, y);
-    y += 24;
-
-    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
-    ctx.beginPath();
-    ctx.moveTo(PADDING, y);
-    ctx.lineTo(WIDTH - PADDING, y);
-    ctx.stroke();
-  }
-
-  // === Scores ===
-  y += 32;
-  const scoreItems = [
-    { label: '构图', score: scores.composition },
-    { label: '光影', score: scores.light },
-    { label: '色彩', score: scores.color },
-    { label: '技术', score: scores.technical },
-    { label: '表达', score: scores.expression },
-  ];
-
-  const colWidth = CONTENT_WIDTH / 2;
-
-  for (let i = 0; i < scoreItems.length; i++) {
-    const item = scoreItems[i];
-    const col = i % 2;
-    const x = PADDING + col * colWidth;
-
-    // Label
-    ctx.fillStyle = GRAY_500;
-    ctx.font = '20px -apple-system, BlinkMacSystemFont, sans-serif';
-    ctx.fillText(item.label, x, y);
-
-    // Progress bar background
-    const barX = x + 60;
-    const barWidth = 120;
-    ctx.fillStyle = GRAY_800;
-    ctx.beginPath();
-    ctx.roundRect(barX, y - 10, barWidth, 8, 4);
-    ctx.fill();
-
-    // Progress bar fill
-    ctx.fillStyle = RED;
-    ctx.beginPath();
-    ctx.roundRect(barX, y - 10, barWidth * (item.score / 10), 8, 4);
-    ctx.fill();
-
-    // Score value
-    ctx.fillStyle = GRAY_300;
-    ctx.font = 'bold 20px -apple-system, BlinkMacSystemFont, sans-serif';
-    ctx.textAlign = 'right';
-    ctx.fillText(item.score.toFixed(1), barX + barWidth + 48, y);
-    ctx.textAlign = 'left';
-
-    if (col === 1 || i === scoreItems.length - 1) {
-      y += 36;
-    }
-  }
-
-  // Overall score
-  y += 16;
-  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
-  ctx.beginPath();
-  ctx.moveTo(PADDING, y);
-  ctx.lineTo(WIDTH - PADDING, y);
-  ctx.stroke();
-
-  y += 32;
-  ctx.fillStyle = GRAY_400;
+  // Label "Score"
+  ctx.fillStyle = TEXT_SECONDARY;
   ctx.font = '500 24px -apple-system, BlinkMacSystemFont, sans-serif';
-  ctx.fillText('综合评分', PADDING, y);
-
-  ctx.fillStyle = RED;
-  ctx.font = 'bold 56px -apple-system, BlinkMacSystemFont, sans-serif';
-  ctx.textAlign = 'right';
-  ctx.fillText(scores.overall.toFixed(1), WIDTH - PADDING, y + 8);
-  ctx.textAlign = 'left';
-
-  y += 40;
-
-  // === Diagnosis ===
-  y += 16;
-  ctx.fillStyle = GRAY_300;
-  ctx.font = 'bold 24px -apple-system, BlinkMacSystemFont, sans-serif';
-  ctx.fillText('诊断分析', PADDING, y);
-  y += 24;
-
-  ctx.fillStyle = GRAY_400;
-  ctx.font = '24px -apple-system, BlinkMacSystemFont, sans-serif';
-  for (const line of diagnosisLines) {
-    ctx.fillText(line, PADDING, y);
-    y += 32;
-  }
-
-  // === Improvement Box ===
-  y += 16;
-  const boxPadding = 16;
-  const improvementBoxHeight = 56 + improvementLines.length * 32;
-
-  // Box background
-  ctx.fillStyle = 'rgba(212, 0, 0, 0.1)';
-  ctx.strokeStyle = 'rgba(212, 0, 0, 0.2)';
-  ctx.lineWidth = 1;
+  ctx.fillText('综合评分', WIDTH - PADDING - 280, y + 10); 
+  
+  // Badge Below Score
+  const badgeW = 200;
+  const badgeH = 50;
+  const badgeX = WIDTH - PADDING - badgeW + 10;
+  const badgeY = y + 80;
+  
+  ctx.fillStyle = tier.color;
   ctx.beginPath();
-  ctx.roundRect(PADDING, y, CONTENT_WIDTH, improvementBoxHeight, 12);
+  ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 25);
   ctx.fill();
-  ctx.stroke();
+  
+  ctx.fillStyle = tier.text;
+  ctx.font = 'bold 26px -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(tier.label, badgeX + badgeW/2, badgeY + 34);
 
-  // Box title
-  y += boxPadding + 20;
-  ctx.fillStyle = RED;
-  ctx.font = 'bold 20px -apple-system, BlinkMacSystemFont, sans-serif';
-  ctx.fillText('💡 进化策略', PADDING + boxPadding, y);
-  y += 24;
+  y += 180;
 
-  // Box content
-  ctx.fillStyle = GRAY_300;
-  ctx.font = '24px -apple-system, BlinkMacSystemFont, sans-serif';
-  for (const line of improvementLines) {
-    ctx.fillText(line, PADDING + boxPadding, y);
-    y += 32;
-  }
-
-  y += boxPadding;
-
-  // === Story Note ===
-  if (storyLines.length > 0) {
-    y += 16;
-    ctx.fillStyle = GRAY_500;
-    ctx.font = '20px -apple-system, BlinkMacSystemFont, sans-serif';
-    ctx.fillText('故事感：', PADDING, y);
-    y += 24;
-
-    ctx.fillStyle = GRAY_400;
-    ctx.font = '24px -apple-system, BlinkMacSystemFont, sans-serif';
-    for (const line of storyLines) {
-      ctx.fillText(line, PADDING, y);
-      y += 28;
+  // 3. Tags
+  if (tags.length > 0) {
+    let tagX = PADDING;
+    ctx.textAlign = 'left';
+    ctx.font = '500 28px -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif';
+    
+    for (const tag of tags.slice(0, 3)) {
+      const tagText = `# ${tag}`;
+      const metrics = ctx.measureText(tagText);
+      const tagW = metrics.width + 48;
+      
+      ctx.fillStyle = '#262626';
+      ctx.beginPath();
+      ctx.roundRect(tagX, y, tagW, 56, 28);
+      ctx.fill();
+      
+      ctx.fillStyle = TEXT_SECONDARY;
+      ctx.fillText(tagText, tagX + 24, y + 38);
+      
+      tagX += tagW + 24;
     }
+    y += 100;
   }
 
-  // === Mood Note ===
-  if (moodLines.length > 0) {
-    y += 16;
-    ctx.fillStyle = GRAY_500;
-    ctx.font = '20px -apple-system, BlinkMacSystemFont, sans-serif';
-    ctx.fillText('情绪：', PADDING, y);
-    y += 24;
-
-    ctx.fillStyle = GRAY_400;
-    ctx.font = '24px -apple-system, BlinkMacSystemFont, sans-serif';
-    for (const line of moodLines) {
-      ctx.fillText(line, PADDING, y);
-      y += 28;
-    }
+  // 4. EXIF
+  if (exif && (exif.camera || exif.aperture)) {
+     y += 20;
+     ctx.strokeStyle = '#333';
+     ctx.lineWidth = 2;
+     ctx.beginPath();
+     ctx.moveTo(PADDING, y);
+     ctx.lineTo(WIDTH - PADDING, y);
+     ctx.stroke();
+     
+     y += 70;
+     
+     ctx.fillStyle = TEXT_SECONDARY;
+     ctx.font = '400 30px "IBM Plex Mono", monospace';
+     ctx.textAlign = 'left';
+     
+     const parts = [];
+     if (exif.camera && exif.camera !== 'Unknown') parts.push(exif.camera);
+     const lensInfo = [exif.focalLength, exif.aperture, exif.shutterSpeed, exif.iso]
+        .filter(x => x && x !== '--').join('  ');
+     if (lensInfo) parts.push(lensInfo);
+     
+     ctx.fillText(parts.join(' | '), PADDING, y);
+     y += 70;
   }
 
-  // === Footer ===
-  y += 24;
-  ctx.fillStyle = 'rgba(24, 24, 27, 0.5)';
-  ctx.fillRect(0, y, WIDTH, 60);
+  // 5. Dimension Scores (Clean Grid)
+  y += 40;
+  const dimensions = [
+      { label: '构图', val: scores.composition },
+      { label: '光影', val: scores.light },
+      { label: '色彩', val: scores.color },
+      { label: '技术', val: scores.technical },
+      { label: '表达', val: scores.expression },
+  ];
+  
+  const itemW = (displayWidth - 60) / 3; 
+  
+  dimensions.forEach((d, i) => {
+      const col = i % 3;
+      const row = Math.floor(i / 3);
+      const x = PADDING + (col * (itemW + 30));
+      const dy = y + (row * 130); 
+      
+      // Label
+      ctx.fillStyle = TEXT_SECONDARY;
+      ctx.font = '400 28px -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(d.label, x, dy);
+      
+      // Bar Track
+      ctx.fillStyle = '#262626';
+      ctx.beginPath();
+      ctx.roundRect(x, dy + 20, itemW - 20, 16, 8);
+      ctx.fill();
+      
+      // Bar Fill
+      let barColor = WHITE;
+      if (d.val >= 8.5) barColor = GOLD;
+      else if (d.val >= 7.0) barColor = WHITE;
+      else barColor = RED;
 
-  y += 36;
-  ctx.fillStyle = GRAY_600;
-  ctx.font = '18px "IBM Plex Mono", monospace';
-  ctx.fillText(`AI 摄影点评 · ${new Date().toLocaleDateString('zh-CN')}`, PADDING, y);
+      ctx.fillStyle = barColor;
+      ctx.beginPath();
+      ctx.roundRect(x, dy + 20, (itemW - 20) * (d.val / 10), 16, 8);
+      ctx.fill();
+      
+      // Value
+      ctx.fillStyle = WHITE;
+      ctx.font = 'bold 40px "IBM Plex Mono", monospace';
+      ctx.fillText(d.val.toFixed(1), x + itemW - 60, dy + 5); 
+  });
+  
+  y += 320; 
 
-  ctx.textAlign = 'right';
-  ctx.fillText('photoinsight.app', WIDTH - PADDING, y);
+  // 6. Review Card (Diagnosis Only)
+  y += 20;
+  
+  ctx.fillStyle = CARD_BG;
+  ctx.beginPath();
+  ctx.roundRect(PADDING, y, displayWidth, diagBoxHeight, 32);
+  ctx.fill();
+  
+  // Accent Line
+  ctx.fillStyle = tier.color === GOLD ? GOLD : RED;
+  ctx.beginPath();
+  ctx.roundRect(PADDING, y + 40, 6, diagBoxHeight - 80, 3);
+  ctx.fill();
+  
+  let textY = y + 70;
+  const textX = PADDING + 50;
+  
+  ctx.fillStyle = '#F0F0F0'; // Bright text
+  ctx.font = '500 42px -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif';
   ctx.textAlign = 'left';
+  
+  diagnosisLines.forEach(line => {
+      ctx.fillText(line, textX, textY);
+      textY += 68; 
+  });
+  
+  y += diagBoxHeight;
 
-  // Export as JPEG for speed
-  return canvas.toDataURL('image/jpeg', 0.9);
+  // 7. Footer
+  y += 80;
+  ctx.fillStyle = '#444';
+  ctx.font = '400 28px -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('—— AI 摄影美学分析 ——', WIDTH / 2, y);
+  
+  y += 50;
+  ctx.fillStyle = TEXT_SECONDARY;
+  ctx.font = '600 36px "IBM Plex Mono", monospace';
+  ctx.letterSpacing = '3px';
+  ctx.fillText('PHOTO INSIGHT', WIDTH / 2, y);
+
+  return canvas.toDataURL('image/jpeg', 0.95);
 };
 
 // Helper function to convert data URL to Blob
