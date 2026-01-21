@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, AlertCircle, Loader2 } from 'lucide-react';
+import { X, AlertCircle, Loader2, Zap } from 'lucide-react';
 import exifr from 'exifr';
 import { PhotoEntry, NavTab } from '../../types';
 import { MAX_FILE_SIZE, getTodayPrompt } from '../../constants';
