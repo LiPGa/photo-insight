@@ -34,8 +34,6 @@ interface ResultPanelProps {
   selectedTitle: string;
   activeTags: string[];
   isSaving: boolean;
-  userNote: string;
-  onUserNoteChange: (value: string) => void;
   onStartAnalysis: () => void;
   onSelectTitle: (title: string) => void;
   onShowShareCard: () => void;
@@ -54,16 +52,12 @@ export const ResultPanel: React.FC<ResultPanelProps> = ({
   selectedTitle,
   activeTags,
   isSaving,
-  userNote,
-  onUserNoteChange,
   onStartAnalysis,
   onSelectTitle,
   onShowShareCard,
   onSaveClick,
   onShowAuthModal,
 }) => {
-  const [isContextCollapsed, setIsContextCollapsed] = useState(false);
-
   return (
   <div className={`transition-all duration-1000 ease-in-out border-l border-white/10 overflow-y-auto bg-black shadow-[0_0_100px_rgba(0,0,0,1)] z-10 ${currentResult ? 'lg:w-[50%] w-full' : 'lg:w-[500px] w-full'}`}>
     <div className="p-8 sm:p-12 lg:p-16 space-y-16">
@@ -100,23 +94,6 @@ export const ResultPanel: React.FC<ResultPanelProps> = ({
             </div>
           </div>
 
-          {/* Creator Context - 分析前显示 */}
-          <div className="space-y-4 p-6 bg-zinc-900/30 border border-white/10 rounded-sm">
-            <label className="mono text-xs text-[#D40000] tracking-widest uppercase font-bold flex items-center gap-2">
-              <div className="w-2 h-2 bg-[#D40000] rounded-full animate-pulse"></div>
-              Creator_Context
-            </label>
-            <p className="text-xs text-zinc-600 leading-relaxed">
-              记录地点、心情和意图，让 AI 更好地理解你的作品
-            </p>
-            <textarea
-              value={userNote}
-              onChange={(e) => onUserNoteChange(e.target.value)}
-              className="w-full bg-black/50 border border-white/10 p-5 mono text-sm focus:border-[#D40000]/50 focus:outline-none min-h-[100px] leading-relaxed transition-colors placeholder:text-zinc-700 rounded-sm"
-              placeholder="📍 地点：...&#10;💭 心情：...&#10;🎯 意图：..."
-            />
-          </div>
-
           <button
             disabled={!currentUpload || isAnalyzing || isUploading || isLimitReached}
             onClick={() => { haptic('medium'); onStartAnalysis(); }}
@@ -147,33 +124,7 @@ export const ResultPanel: React.FC<ResultPanelProps> = ({
         </div>
       ) : (
         <div className="space-y-20 animate-in slide-in-from-right-12 duration-1000">
-          {/* Collapsible Creator Context - 分析完成后可折叠 */}
-          {userNote && (
-            <div className="p-4 bg-zinc-900/30 border border-white/5 rounded-sm">
-              <button
-                onClick={() => setIsContextCollapsed(!isContextCollapsed)}
-                className="w-full flex items-center justify-between text-left"
-              >
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-zinc-600 rounded-full"></div>
-                  <span className="mono text-xs text-zinc-500 tracking-widest uppercase font-bold">
-                    Creator_Context
-                  </span>
-                </div>
-                {isContextCollapsed ? (
-                  <ChevronDown size={16} className="text-zinc-600" />
-                ) : (
-                  <ChevronUp size={16} className="text-zinc-600" />
-                )}
-              </button>
-              {!isContextCollapsed && (
-                <p className="mt-3 text-sm text-zinc-500 leading-relaxed pl-4 border-l border-zinc-800">
-                  {userNote}
-                </p>
-              )}
-            </div>
-          )}
-
+          
           {/* Titles */}
           <div className="space-y-12">
             <div className="space-y-6">

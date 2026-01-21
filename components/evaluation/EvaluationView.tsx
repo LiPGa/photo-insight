@@ -60,7 +60,6 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
   const [currentUpload, setCurrentUpload] = useState<string | null>(null); // Cloudinary URL or base64
   const [previewUrl, setPreviewUrl] = useState<string | null>(null); // 本地预览 URL
   const [currentExif, setCurrentExif] = useState<ExifData | null>(null);
-  const [userNote, setUserNote] = useState('');
   const [selectedTitle, setSelectedTitle] = useState('');
   const [activeTags, setActiveTags] = useState<string[]>([]);
   const [copied, setCopied] = useState(false);
@@ -180,7 +179,8 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
   const handleStartAnalysis = async () => {
     if (!currentUpload || isLimitReached) return;
 
-    const result = await startAnalysis(currentUpload, currentExif || {}, userNote);
+    // Pass empty string for context as the feature is removed
+    const result = await startAnalysis(currentUpload, currentExif || {}, '');
     if (result) {
       if (result.analysis.suggestedTitles?.length) {
         setSelectedTitle(result.analysis.suggestedTitles[0]);
@@ -248,7 +248,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
       imageUrl: currentUpload,
       date: photoDate,
       location: 'STATION_ALPHA',
-      notes: userNote || 'No creator notes.',
+      notes: '', // Empty notes as the feature is removed
       tags: activeTags,
       params: {
         camera: currentExif?.camera,
@@ -380,7 +380,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
                 )}
                 <img
                   src={displayUrl}
-                  className="max-w-full max-h-[75vh] object-contain shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/5 bg-zinc-900/50"
+                  className="max-w-full max-h-[55vh] sm:max-h-[75vh] object-contain shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/5 bg-zinc-900/50"
                   alt="Preview"
                 />
                 {!isAnalyzing && !isUploading && (
@@ -407,14 +407,16 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
           )}
         </div>
 
-        {/* Technical Panel */}
-        <TechnicalPanel
-          currentExif={currentExif}
-          currentUpload={currentUpload}
-          currentResult={currentResult}
-          copied={copied}
-          onCopyInstagram={handleCopyInstagram}
-        />
+        {/* Technical Panel - Only show when image is uploaded */}
+        {currentUpload && (
+          <TechnicalPanel
+            currentExif={currentExif}
+            currentUpload={currentUpload}
+            currentResult={currentResult}
+            copied={copied}
+            onCopyInstagram={handleCopyInstagram}
+          />
+        )}
       </div>
 
       {/* Right Panel: Analysis Result */}
@@ -429,8 +431,6 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
         selectedTitle={selectedTitle}
         activeTags={activeTags}
         isSaving={isSaving}
-        userNote={userNote}
-        onUserNoteChange={setUserNote}
         onStartAnalysis={handleStartAnalysis}
         onSelectTitle={setSelectedTitle}
         onShowShareCard={() => setShowShareCard(true)}
