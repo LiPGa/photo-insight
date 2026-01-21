@@ -60,8 +60,7 @@ export interface DailyPrompt {
 
 export enum NavTab {
   EVALUATION = 'evaluation',
-  PATH = 'path',
-  LEARN = 'learn'
+  PATH = 'path'
 }
 
 // 学习进度追踪

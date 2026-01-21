@@ -31,7 +31,6 @@ interface EvaluationViewProps {
   entries: PhotoEntry[];
   setEntries: React.Dispatch<React.SetStateAction<PhotoEntry[]>>;
   onNavigateToArchives: () => void;
-  onNavigateToLearn: () => void;
   onShowAuthModal: () => void;
 }
 
@@ -39,7 +38,6 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
   entries,
   setEntries,
   onNavigateToArchives,
-  onNavigateToLearn,
   onShowAuthModal,
 }) => {
   const todayPrompt = getTodayPrompt();
@@ -423,7 +421,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
               <div className="w-full mb-4 px-4">
                 <DailyPromptCard
                   prompt={todayPrompt}
-                  onStartChallenge={onNavigateToLearn}
+                  onStartChallenge={onNavigateToArchives}
                   compact
                 />
               </div>
