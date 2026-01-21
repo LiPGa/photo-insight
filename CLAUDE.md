@@ -11,6 +11,20 @@ npm run build        # Build for production
 npm run preview      # Preview production build
 ```
 
+## Deployment
+
+This project is configured for **Vercel** deployment with automatic PR preview functionality.
+
+- **Quick Start**: See [DEPLOYMENT.md](./DEPLOYMENT.md) for complete setup instructions
+- **Config File**: `vercel.json` contains Vercel-specific settings
+- **PR Previews**: Automatically generated for all pull requests when GitHub is connected
+- **Environment**: Set required env vars in Vercel dashboard (Settings → Environment Variables)
+
+```bash
+# Deploy using Vercel CLI
+vercel --prod
+```
+
 ## Environment Setup
 
 Set environment variables in `.env.local`:
