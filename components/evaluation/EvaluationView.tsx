@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, AlertCircle, Loader2, Zap } from 'lucide-react';
+import { X, AlertCircle, Loader2 } from 'lucide-react';
 import exifr from 'exifr';
 import { PhotoEntry, NavTab } from '../../types';
 import { MAX_FILE_SIZE, getTodayPrompt } from '../../constants';
@@ -385,21 +385,6 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
                   className="max-w-full max-h-[55vh] sm:max-h-[75vh] object-contain shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/5 bg-zinc-900/50"
                   alt="Preview"
                 />
-                
-                {/* Floating Start Button for Mobile/Desktop Convenience */}
-                {!currentResult && !isAnalyzing && !isUploading && (
-                  <div className="absolute bottom-4 sm:bottom-8 left-0 right-0 flex justify-center z-20 px-4">
-                    <button
-                      onClick={handleStartAnalysis}
-                      disabled={isLimitReached}
-                      className="bg-[#D40000] hover:bg-[#B30000] text-white px-8 py-3 rounded-full font-bold shadow-lg flex items-center gap-2 transition-all active:scale-95 animate-in slide-in-from-bottom-4 backdrop-blur-sm bg-opacity-90"
-                    >
-                      <Zap size={18} fill="currentColor" />
-                      {isLimitReached ? '次数用完' : '开始分析'}
-                    </button>
-                  </div>
-                )}
-
                 {!isAnalyzing && !isUploading && (
                   <button
                     onClick={handleClearUpload}
