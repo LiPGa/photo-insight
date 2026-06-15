@@ -1,5 +1,3 @@
-import { GoogleGenAI, GenerateContentResponse, Type } from "@google/genai";
-
 // Helper to get random score
 const getRandomScore = (min: number, max: number) => parseFloat((Math.random() * (max - min) + min).toFixed(1));
 
@@ -26,25 +24,42 @@ const getMockResponse = () => ({
   }
 });
 
-// Helper function to fetch image from URL and convert to base64
-async function fetchImageAsBase64(url: string): Promise<{ base64: string; mimeType: string }> {
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
-  }
-  const blob = await response.blob();
-  const mimeType = blob.type || 'image/jpeg';
+async function readErrorResponse(response: Response): Promise<string> {
+  const contentType = response.headers.get('content-type') || '';
 
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const dataUrl = reader.result as string;
-      const base64 = dataUrl.split(',')[1];
-      resolve({ base64, mimeType });
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
+  if (contentType.includes('application/json')) {
+    const errorData = await response.json().catch(() => ({}));
+    return errorData.error || errorData.message || `分析请求失败: ${response.status}`;
+  }
+
+  const text = await response.text().catch(() => '');
+  if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
+    return '/api/analyze 没有正确部署，服务器返回了网页而不是分析结果';
+  }
+
+  return text || `分析请求失败: ${response.status}`;
+}
+
+function toUserFacingError(error: unknown): Error {
+  const message = error instanceof Error ? error.message : String(error);
+
+  if (message.includes('high demand') || message.includes('UNAVAILABLE') || message.includes('503')) {
+    return new Error('Gemini 当前繁忙，请稍后重试');
+  }
+
+  if (message.includes('没有正确部署') || message.includes('Unexpected token') || message.includes('not valid JSON')) {
+    return new Error('/api/analyze 分析接口未正确部署，请检查当前部署平台的 serverless function 配置');
+  }
+
+  if (message.includes('GEMINI_API_KEY')) {
+    return new Error('分析服务缺少 GEMINI_API_KEY，请检查部署环境变量');
+  }
+
+  if (message.includes('Failed to fetch') || message.includes('NetworkError')) {
+    return new Error('网络请求失败，请检查当前网络或稍后重试');
+  }
+
+  return new Error(message || '分析终端响应异常。请重试。');
 }
 
 export async function analyzePhoto(imageUri: string, technicalContext: any): Promise<any> {
@@ -52,171 +67,34 @@ export async function analyzePhoto(imageUri: string, technicalContext: any): Pro
   const useMock = import.meta.env.VITE_MOCK_API === 'true';
 
   if (useMock) {
-    console.log('🔧 Mock 模式: 返回模拟数据，不调用 Gemini API');
+    console.log('🔧 Mock 模式: 返回模拟数据，不调用 API');
     await new Promise(resolve => setTimeout(resolve, 2000));
     return getMockResponse();
   }
 
-  // 优先使用 VITE_GEMINI_API_KEY，如果没有则回退到 GEMINI_API_KEY (通过 vite.config.ts 定义的 process.env)
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY || (process.env.API_KEY as string) || (process.env.GEMINI_API_KEY as string);
-  if (!apiKey) {
-    throw new Error("未检测到 API Key，请在 .env.local 中配置 VITE_GEMINI_API_KEY 或 GEMINI_API_KEY");
-  }
-
-  const ai = new GoogleGenAI({ apiKey });
-
-  let base64Data: string;
-  let mimeType = 'image/jpeg';
-
-  if (imageUri.startsWith('data:')) {
-    // Handle data URL
-    const parts = imageUri.split(',');
-    mimeType = parts[0].split(':')[1].split(';')[0];
-    base64Data = parts[1];
-  } else if (imageUri.startsWith('http://') || imageUri.startsWith('https://')) {
-    // Handle external URL (e.g., Cloudinary)
-    console.log('📷 Fetching image from URL:', imageUri);
-    const imageData = await fetchImageAsBase64(imageUri);
-    base64Data = imageData.base64;
-    mimeType = imageData.mimeType;
-  } else {
-    // Assume it's already base64 data
-    base64Data = imageUri;
-  }
-
-  const prompt = `
-    你是一名【严格、克制、不讨好用户】的资深摄影评论家，
-    同时也是一位长期拍摄、习惯反复观看照片的摄影师。
-
-    你的职责不是写评审报告，而是像一位真实的人，
-    在认真看完这张照片后，用自然、有呼吸感的语言，
-    结合技术与感受，给出诚实而专业的反馈。
-
-    【评分要求】（重要：请在 JSON 的 scores 字段中返回以下维度，采用 10 分制，可精确到小数点后一位）
-    1. composition (构图):
-      画面布局是否有秩序，主体是否明确，视觉是否平衡，
-      是否存在有效的引导线、前后景关系或留白。
-      背景杂乱、元素堆砌、主体不清晰需扣分。
-
-    2. light (光影):
-      曝光是否准确，光线是否具有方向性与层次，
-      明暗关系是否服务于主体与情绪。
-      死白过曝、灰平顺光、无明暗组织需扣分。
-
-    3. color (色彩):
-      色调是否和谐统一，饱和度与对比是否克制，
-      色彩是否强化情绪或主题表达。
-      杂乱色温、无意识调色、情绪与色彩不匹配需扣分。
-
-    4. technical (技术):
-      清晰度、对焦准确性、噪点控制是否合理，
-      后期是否克制且服务画面。
-      技术缺陷如果削弱观看体验需扣分；
-      若模糊或噪点增强氛围，可酌情正向评价。
-
-    5. expression (表达):
-      是否成功传达情绪、意图或故事，
-      画面是否具有个人视角或可辨识的表达。
-      空洞记录、缺乏指向性的画面需扣分。
-
-    6. overall (总分):
-      综合以上维度的整体印象分，
-      通常与各项评分一致，但可因整体气质、
-      视觉冲击力或独特性略高或略低。
-
-    【评分哲学】
-    - 普通随手拍、记录照的合理区间为 4.0–6.0 分。
-    - 7.0 分以上必须体现明确的构图意识或拍摄意图。
-    - 8.5 分以上仅属于具有强烈视觉张力、成熟表达或独特视角的作品。
-    - 评分宁可偏低，也不要虚高。
-    - **【核心要求】请务必独立评估每个维度的分数：一张照片可能构图极佳但光影平庸，或者内容深刻但完整度欠佳。严禁给出四个维度完全一致或高度趋同的分数。**
-
-    【评价方式（非常重要）】
-    - 不要像论文或说明书一样列举术语。
-    - 技术信息（构图、光影、焦段、光圈等）在必要时自然融入叙述，
-      用来解释“为什么会有这样的观感”，而不是单独点名参数。
-    - 评价时请遵循：先描述观看时的直观感受 → 再落到技术原因 → 最后给出判断。
-
-    【评价要求】
-    - 诊断（diagnosis）：
-      先指出照片中真实存在、能被感受到的优点或闪光点，
-      描述它们如何影响观看体验。 
-      随后，如果存在问题，请诚实、克制地指出，
-      重点说明这些问题是如何削弱画面表达的，而不是简单下结论。
-
-    - 进化策略（improvement）：
-      提供具体、可操作的改进建议，
-      并说明如果这样调整，画面在视觉或情绪上会产生什么变化。
-
-    - 标题与标签：
-      提供 3 个具有美感或叙事感的中文标题，
-      以及 3–5 个准确反映照片特征的中文关键标签。
-
-    - Instagram：
-      提供一条风格冷淡、文艺或极简的英文配文（instagramCaption），
-      并附上 5–8 个专业且相关的英文标签（instagramHashtags）。
-
-    【EXIF / 拍摄参数参考】
-    ${JSON.stringify(technicalContext.exif)}
-
-    【创作者背景】
-    ${technicalContext.creatorContext || '未提供'}
-    （如果创作者提供了拍摄地点、心情或意图，请结合这些信息来理解照片，
-      但要独立判断照片本身是否成功传达了这些意图。如果意图与成片存在落差，请诚实指出。）
-
-    【语言要求】
-    - 除 Instagram 配文与标签外，所有分析内容必须使用中文。
-    - 避免使用“不错”“还可以”“有提升空间”等空泛表述。
-  `;
-
   try {
-    const response: GenerateContentResponse = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: {
-        parts: [
-          { inlineData: { mimeType: mimeType, data: base64Data } },
-          { text: prompt }
-        ]
+    // 改为调用内部 API 代理，以绕过网络限制并保护 API Key
+    const response = await fetch('/api/analyze', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
       },
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            scores: {
-              type: Type.OBJECT,
-              properties: {
-                composition: { type: Type.NUMBER },
-                light: { type: Type.NUMBER },
-                color: { type: Type.NUMBER },
-                technical: { type: Type.NUMBER },
-                expression: { type: Type.NUMBER },
-                overall: { type: Type.NUMBER }
-              },
-              required: ["composition", "light", "color", "technical", "expression", "overall"]
-            },
-            analysis: {
-              type: Type.OBJECT,
-              properties: {
-                diagnosis: { type: Type.STRING },
-                improvement: { type: Type.STRING },
-                storyNote: { type: Type.STRING },
-                moodNote: { type: Type.STRING },
-                overallSuggestion: { type: Type.STRING },
-                suggestedTitles: { type: Type.ARRAY, items: { type: Type.STRING } },
-                suggestedTags: { type: Type.ARRAY, items: { type: Type.STRING } },
-                instagramCaption: { type: Type.STRING },
-                instagramHashtags: { type: Type.ARRAY, items: { type: Type.STRING } }
-              },
-              required: ["diagnosis", "improvement", "storyNote", "moodNote", "overallSuggestion", "suggestedTitles", "suggestedTags", "instagramCaption", "instagramHashtags"]
-            }
-          },
-          required: ["scores", "analysis"]
-        }
-      }
+      body: JSON.stringify({
+        imageUri,
+        technicalContext
+      }),
     });
 
-    const result = JSON.parse(response.text || "{}");
+    if (!response.ok) {
+      throw new Error(await readErrorResponse(response));
+    }
+
+    const contentType = response.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      throw new Error(await readErrorResponse(response));
+    }
+
+    const result = await response.json();
 
     // Validate response structure
     if (!result.scores || !result.analysis) {
@@ -227,6 +105,6 @@ export async function analyzePhoto(imageUri: string, technicalContext: any): Pro
     return result;
   } catch (error) {
     console.error("AI Analysis Error:", error);
-    throw error;
+    throw toUserFacingError(error);
   }
 }

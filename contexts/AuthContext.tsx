@@ -13,6 +13,52 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AUTH_CALLBACK_PATH = '/auth/callback';
+
+function getOAuthRedirectUrl() {
+  return new URL(AUTH_CALLBACK_PATH, window.location.origin).toString();
+}
+
+function cleanAuthCallbackUrl() {
+  const { pathname, search, hash } = window.location;
+  const isAuthCallback = pathname === AUTH_CALLBACK_PATH;
+  const hasAuthParams = search.includes('code=') || search.includes('error=') || hash.includes('access_token=');
+
+  if (isAuthCallback || hasAuthParams) {
+    window.history.replaceState({}, document.title, window.location.origin);
+  }
+}
+
+function clearStoredAuthTokens() {
+  try {
+    const keysToRemove = Object.keys(localStorage).filter((key) => (
+      key === 'photoinsight-auth' ||
+      key === 'supabase.auth.token' ||
+      (key.startsWith('sb-') && key.endsWith('-auth-token'))
+    ));
+
+    keysToRemove.forEach((key) => localStorage.removeItem(key));
+  } catch (error) {
+    console.warn('Failed to clear stored auth tokens:', error);
+  }
+}
+
+function isRecoverableAuthError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error || '');
+  return (
+    message.includes('Invalid Refresh Token') ||
+    message.includes('Refresh Token Not Found') ||
+    message.includes('AuthRetryableFetchError') ||
+    message.includes('Failed to fetch') ||
+    message.includes('NetworkError')
+  );
+}
+
+async function recoverFromBadAuthSession(error: unknown) {
+  console.warn('Recovering from invalid auth session:', error);
+  clearStoredAuthTokens();
+  await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined);
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -21,9 +67,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session }, error }) => {
+      if (error) {
+        if (isRecoverableAuthError(error)) {
+          await recoverFromBadAuthSession(error);
+        }
+        setSession(null);
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+
       setSession(session);
       setUser(session?.user ?? null);
+      setLoading(false);
+      if (session) {
+        cleanAuthCallbackUrl();
+      }
+    }).catch(async (error) => {
+      if (isRecoverableAuthError(error)) {
+        await recoverFromBadAuthSession(error);
+      }
+      setSession(null);
+      setUser(null);
       setLoading(false);
     });
 
@@ -33,6 +99,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
+        if (session) {
+          cleanAuthCallbackUrl();
+        }
       }
     );
 
@@ -59,7 +128,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: window.location.origin,
+        redirectTo: getOAuthRedirectUrl(),
       },
     });
     return { error };
@@ -67,6 +136,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    clearStoredAuthTokens();
   };
 
   return (
