@@ -158,6 +158,41 @@ If routes return 404, verify `vercel.json` has:
 
 ## Advanced Configuration
 
+### Google Login Stability
+
+Google OAuth redirects back to:
+
+```
+https://your-domain.com/auth/callback
+```
+
+Add every domain that can start a login flow to **Supabase → Authentication → URL Configuration → Redirect URLs**:
+
+```
+http://localhost:5173/auth/callback
+https://your-production-domain.com/auth/callback
+https://your-preview-domain.vercel.app/auth/callback
+https://your-china-access-domain.com/auth/callback
+```
+
+In Google Cloud Console, the OAuth client must use Supabase's callback URL as an authorized redirect URI:
+
+```
+https://<project-ref>.supabase.co/auth/v1/callback
+```
+
+If you add a custom auth domain in Supabase later, also add its matching callback URL in Google Cloud Console.
+
+### Mainland China Access
+
+For mainland China access, treat the app as three separate surfaces:
+
+1. **Frontend static app**: deploy `dist/` to Cloudflare Pages, a mainland CDN, or an object-storage static site behind a CDN.
+2. **AI/API proxy**: keep Gemini calls behind `/api/analyze` on a serverless function outside the browser. Do not expose model API keys through `VITE_` variables.
+3. **Auth/data/storage**: Supabase, Google OAuth, Gemini, and Cloudinary may be slow or unavailable from mainland networks. Keep email/password login as the reliable fallback, and consider a mainland-friendly auth provider if Chinese users are a core audience.
+
+Cloudflare Pages SPA fallback is provided by `public/_redirects`, so deep links such as `/auth/callback` resolve to the React app after deployment.
+
 ### Custom Domains
 
 1. Go to **Settings → Domains**

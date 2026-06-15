@@ -63,7 +63,7 @@ export function usePhotoAnalysis() {
       return result;
     } catch (err: any) {
       console.error(err);
-      setError("分析终端响应异常。请重试。");
+      setError(err?.message || "分析终端响应异常。请重试。");
       return null;
     } finally {
       setIsAnalyzing(false);

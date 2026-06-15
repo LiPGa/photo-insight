@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import type { DetailedAnalysis, DetailedScores } from '../types';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -9,7 +10,16 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export const supabase = createClient(
   supabaseUrl || '',
-  supabaseAnonKey || ''
+  supabaseAnonKey || '',
+  {
+    auth: {
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+      flowType: 'pkce',
+      persistSession: true,
+      storageKey: 'photoinsight-auth',
+    },
+  }
 );
 
 // Database types
@@ -23,8 +33,8 @@ export interface DbPhotoEntry {
   notes: string | null;
   tags: string[] | null;
   params: Record<string, any> | null;
-  scores: Record<string, any>;
-  analysis: Record<string, any> | null;
+  scores: DetailedScores;
+  analysis: DetailedAnalysis | null;
   created_at: string;
 }
 
