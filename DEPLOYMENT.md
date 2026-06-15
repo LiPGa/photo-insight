@@ -38,7 +38,7 @@ In your Vercel project dashboard, go to **Settings → Environment Variables** a
 
 | Variable Name | Description | Required | Example |
 |--------------|-------------|----------|---------|
-| `VITE_GEMINI_API_KEY` | Google Gemini API key | ✅ Yes | `AIza...` |
+| `GEMINI_API_KEY` | Server-side Google Gemini API key for `/api/analyze` | ✅ Yes | `AIza...` |
 | `VITE_SUPABASE_URL` | Supabase project URL | ⚠️ Optional* | `https://xxx.supabase.co` |
 | `VITE_SUPABASE_ANON_KEY` | Supabase anonymous key | ⚠️ Optional* | `eyJh...` |
 | `VITE_CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name | ⚠️ Optional* | `your-cloud` |
@@ -46,7 +46,8 @@ In your Vercel project dashboard, go to **Settings → Environment Variables** a
 | `VITE_MOCK_API` | Use mock data (dev only) | No | `true` |
 
 **Important Notes:**
-- All variables need the `VITE_` prefix to be accessible in the browser
+- `GEMINI_API_KEY` must **not** use the `VITE_` prefix; it is read only by the serverless `/api/analyze` route.
+- Browser-side variables need the `VITE_` prefix to be accessible in the Vite app.
 - Set variables for **Production**, **Preview**, and **Development** environments
 - *Optional variables: App works in guest mode without Supabase/Cloudinary, but with limited features
 

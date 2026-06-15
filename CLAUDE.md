@@ -30,8 +30,9 @@ vercel --prod
 Set environment variables in `.env.local`:
 
 ```bash
-# Gemini API Key (required) - must use VITE_ prefix for browser access
-VITE_GEMINI_API_KEY=your_gemini_api_key_here
+# Gemini API Key (required for serverless /api/analyze)
+# Do not prefix this with VITE_; it must stay server-side.
+GEMINI_API_KEY=your_gemini_api_key_here
 
 # Mock mode - skip API calls and return mock data for local testing (optional)
 VITE_MOCK_API=true
@@ -46,7 +47,7 @@ VITE_CLOUDINARY_UPLOAD_PRESET=your_upload_preset
 ```
 
 **Important:**
-1. **Must use `VITE_` prefix**: Only env vars starting with `VITE_` are exposed to browser code by Vite
+1. **Keep model keys server-side**: `GEMINI_API_KEY` is read by `/api/analyze`; do not expose it with a `VITE_` prefix
 2. **Create `.env.local` file**: In project root (git-ignored)
 3. **Restart dev server**: After changing `.env.local`, restart `npm run dev`
 4. **Use mock mode locally**: Set `VITE_MOCK_API=true` to save API quota during development
