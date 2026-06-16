@@ -1,5 +1,5 @@
 import React from 'react';
-import { Zap, Activity, User, LogOut, Lightbulb } from 'lucide-react';
+import { Zap, Activity, User, LogOut, Lightbulb } from '../ui/icons';
 import { NavTab } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
 

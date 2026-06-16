@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, AlertCircle, Loader2 } from 'lucide-react';
+import { X, AlertCircle, Loader2 } from '../ui/icons';
 import exifr from 'exifr';
 import { PhotoEntry, NavTab } from '../../types';
 import { MAX_FILE_SIZE } from '../../constants';
@@ -223,11 +223,15 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
 
   const handleCopyInstagram = () => {
     if (!currentResult?.analysis) return;
-    const caption = currentResult.analysis.instagramCaption || '';
+    const captions = currentResult.analysis.instagramCaptions?.length
+      ? currentResult.analysis.instagramCaptions
+      : currentResult.analysis.instagramCaption
+        ? [currentResult.analysis.instagramCaption]
+        : [];
     const hashtags = currentResult.analysis.instagramHashtags
       ?.map((tag) => (tag.startsWith('#') ? tag : `#${tag}`))
       .join(' ') || '';
-    const text = `${caption}\n\n${hashtags}`;
+    const text = `${captions.join('\n')}\n\n${hashtags}`.trim();
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);

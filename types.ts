@@ -6,9 +6,21 @@ export interface DetailedScores {
   technical: number;       // 技术
   expression: number;      // 表达
   overall: number;         // 总体
+  moment?: number;         // 瞬间
+  originality?: number;    // 原创性
+  competitionFit?: number; // 投稿适配
   tilt?: number;
   sharpness?: number;
 }
+
+export type SubmissionVerdict =
+  | '不建议投稿'
+  | '适合 Instagram / 小红书，但不适合比赛'
+  | '可作为 LFI 普通候选'
+  | '有 LFI Selection 潜力'
+  | '可作为 LensCulture single image 候选'
+  | '可作为 LensCulture series 的一张，但单张不够强'
+  | '有较强比赛潜力，值得认真打磨后投稿';
 
 export interface DetailedAnalysis {
   diagnosis: string;
@@ -16,9 +28,22 @@ export interface DetailedAnalysis {
   storyNote: string;
   moodNote: string;
   overallSuggestion: string;
+  strengths?: string[];
+  weaknesses?: string[];
+  technicalReview?: string;
+  submissionAssessment?: {
+    verdict: SubmissionVerdict;
+    reason: string;
+  };
+  cropAdvice?: string;
+  editingAdvice?: string;
+  reshootAdvice?: string;
+  nextAssignment?: string;
+  oneLineConclusion?: string;
   suggestedTitles?: string[];
   suggestedTags?: string[];
   instagramCaption?: string;
+  instagramCaptions?: string[];
   instagramHashtags?: string[];
 }
 

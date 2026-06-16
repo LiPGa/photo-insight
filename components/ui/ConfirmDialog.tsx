@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, AlertTriangle } from 'lucide-react';
+import { X, AlertTriangle } from './icons';
 
 interface ConfirmDialogProps {
   isOpen: boolean;

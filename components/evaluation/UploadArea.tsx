@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus } from 'lucide-react';
+import { Plus } from '../ui/icons';
 
 const UploadCoordinates: React.FC = () => (
   <div className="absolute inset-0 pointer-events-none opacity-40">

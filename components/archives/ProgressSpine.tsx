@@ -1,6 +1,6 @@
 import React, { memo, useRef, useEffect, useState } from 'react';
 import { PhotoEntry } from '../../types';
-import { Star } from 'lucide-react';
+import { Star } from '../ui/icons';
 
 interface ProgressSpineProps {
   entries: PhotoEntry[];

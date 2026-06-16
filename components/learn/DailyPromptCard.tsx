@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, ArrowRight, Lightbulb } from 'lucide-react';
+import { Sparkles, ArrowRight, Lightbulb } from '../ui/icons';
 import { DailyPrompt } from '../../types';
 
 interface DailyPromptCardProps {

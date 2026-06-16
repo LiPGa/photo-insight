@@ -1,5 +1,5 @@
 import React from 'react';
-import { User, LogOut } from 'lucide-react';
+import { User, LogOut } from '../ui/icons';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface UserStatusBarProps {

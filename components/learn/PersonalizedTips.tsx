@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { BookOpen, ArrowRight, Zap } from 'lucide-react';
+import { BookOpen, ArrowRight, Zap } from '../ui/icons';
 import { PhotoEntry, DetailedScores, DailyPrompt } from '../../types';
 import { SKILL_IMPROVEMENT_TIPS, DAILY_PROMPTS } from '../../constants';
 

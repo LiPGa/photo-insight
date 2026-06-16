@@ -1,3 +1,5 @@
+import { buildPhotoAnalysisPrompt, photoAnalysisResponseSchema } from '../services/analysisContract';
+
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -34,39 +36,7 @@ export default async function handler(req: any, res: any) {
       base64Data = Buffer.from(arrayBuffer).toString('base64');
     }
 
-    const prompt = `
-      你是一名【严格、克制、不讨好用户】的资深摄影评论家，
-      同时也是一位长期拍摄、习惯反复观看照片的摄影师。
-
-      你的职责不是写评审报告，而是像一位真实的人，
-      在认真看完这张照片后，用自然、有呼吸感的语言，
-      结合技术与感受，给出诚实而专业的反馈。
-
-      【评分要求】采用 10 分制，可精确到小数点后一位。
-      1. composition (构图)
-      2. light (光影)
-      3. color (色彩)
-      4. technical (技术)
-      5. expression (表达)
-      6. overall (总分)
-
-      【评分哲学】
-      - 普通随手拍合理区间 4.0-6.0 分。
-      - 7.0 分以上需有明确意识。
-      - 8.5 分以上需有强烈视觉张力或独特视角。
-      - 严禁给出四个维度完全一致的分数。
-
-      【评价方式】
-      先描述直观感受 -> 再落到技术原因 -> 最后给出判断。
-
-      【EXIF 参考】
-      ${JSON.stringify(technicalContext.exif || {})}
-
-      【创作者背景】
-      ${technicalContext.creatorContext || '未提供'}
-
-      除 Instagram 配文与标签外，所有分析内容必须使用中文。
-    `;
+    const prompt = buildPhotoAnalysisPrompt(technicalContext);
 
     const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
     const geminiRes = await fetch(geminiUrl, {
@@ -83,49 +53,7 @@ export default async function handler(req: any, res: any) {
         ],
         generationConfig: {
           responseMimeType: 'application/json',
-          responseSchema: {
-            type: 'object',
-            properties: {
-              scores: {
-                type: 'object',
-                properties: {
-                  composition: { type: 'number' },
-                  light: { type: 'number' },
-                  color: { type: 'number' },
-                  technical: { type: 'number' },
-                  expression: { type: 'number' },
-                  overall: { type: 'number' },
-                },
-                required: ['composition', 'light', 'color', 'technical', 'expression', 'overall'],
-              },
-              analysis: {
-                type: 'object',
-                properties: {
-                  diagnosis: { type: 'string' },
-                  improvement: { type: 'string' },
-                  storyNote: { type: 'string' },
-                  moodNote: { type: 'string' },
-                  overallSuggestion: { type: 'string' },
-                  suggestedTitles: { type: 'array', items: { type: 'string' } },
-                  suggestedTags: { type: 'array', items: { type: 'string' } },
-                  instagramCaption: { type: 'string' },
-                  instagramHashtags: { type: 'array', items: { type: 'string' } },
-                },
-                required: [
-                  'diagnosis',
-                  'improvement',
-                  'storyNote',
-                  'moodNote',
-                  'overallSuggestion',
-                  'suggestedTitles',
-                  'suggestedTags',
-                  'instagramCaption',
-                  'instagramHashtags',
-                ],
-              },
-            },
-            required: ['scores', 'analysis'],
-          },
+          responseSchema: photoAnalysisResponseSchema,
         },
       }),
     });

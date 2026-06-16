@@ -1,5 +1,5 @@
 import React from 'react';
-import { Cpu, Lightbulb } from 'lucide-react';
+import { Cpu, Lightbulb } from '../ui/icons';
 import { AI_THINKING_STAGES } from '../../constants';
 
 interface AnalyzingOverlayProps {

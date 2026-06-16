@@ -8,18 +8,42 @@ const getMockResponse = () => ({
     light: getRandomScore(5.5, 8.0),
     color: getRandomScore(6.0, 8.0),
     technical: getRandomScore(5.5, 7.5),
+    moment: getRandomScore(4.8, 7.2),
     expression: getRandomScore(6.0, 8.5),
+    originality: getRandomScore(4.8, 7.0),
+    competitionFit: getRandomScore(4.2, 6.8),
     overall: getRandomScore(6.0, 8.0)
   },
   analysis: {
-    diagnosis: "这张照片展现了一个有趣的视角，光线的运用营造出一种宁静的氛围。构图上主体位置合理，但背景略显杂乱，分散了观者的注意力。\n\n色彩处理上偏向自然，没有过度调色的痕迹，这是值得肯定的。整体来看，这是一张有想法但执行上还有提升空间的作品。",
-    improvement: "建议在拍摄时多注意背景的简洁性，可以通过调整拍摄角度或使用更大的光圈来虚化背景。另外，可以尝试在黄金时段拍摄，利用更柔和的自然光来增强画面的氛围感。",
-    storyNote: "画面传递出一种日常生活中的宁静时刻，仿佛在邀请观者停下来，感受当下的美好。",
+    diagnosis: "这张照片有明确的观看方向，但目前更接近一次有效记录，还没有完全成为一张成熟作品。主体和环境之间有关系，不过画面边缘与背景信息仍然分散注意力。",
+    strengths: [
+      "主体位置没有完全居中，画面保留了一些环境信息，让照片不只是单纯记录对象。",
+      "光线没有严重破坏主体，可读性基本成立。",
+      "色彩处理相对克制，没有用过重后期掩盖画面问题。"
+    ],
+    weaknesses: [
+      "背景关系还不够精确，边缘处的信息会抢走视线。",
+      "瞬间不够决定性，人物或主体状态还没有形成不可替代的时机。",
+      "目前适合社交媒体展示，但作为比赛投稿，作品性还偏弱。"
+    ],
+    technicalReview: "曝光和焦点基本可用，技术没有成为主要问题，但画面完成度更多受制于构图取舍和瞬间等待。EXIF 可以作为参考，但这张照片的提升重点不在参数。",
+    improvement: "先把画面里真正有用的关系留下来，减少边缘干扰；其次等待一个更明确的动作或视线，让主体和环境之间产生更强的张力。",
+    storyNote: "画面有日常观察的基础，但故事性仍是推测，还没有被具体动作或空间关系充分支撑。",
     moodNote: "平静、沉思",
-    overallSuggestion: "继续保持对光线的敏感度，同时加强对构图和背景的控制。",
+    overallSuggestion: "这张照片有练习价值，但离投稿作品还需要更强的瞬间和更干净的画面关系。",
+    submissionAssessment: {
+      verdict: "适合 Instagram / 小红书，但不适合比赛",
+      reason: "画面有基本审美和可读性，但缺少足够独特的观看方式或决定性瞬间，作为单张投稿说服力不足。"
+    },
+    cropAdvice: "可以轻微裁掉边缘最分散注意力的区域，但不要裁到只剩主体，否则会失去环境关系。",
+    editingAdvice: "建议压低无关背景的亮度，适度增加主体附近的局部对比；色温和饱和度保持克制。",
+    reshootAdvice: "重拍时靠近半步或换一个更低的机位，等待主体出现明确动作、视线或与背景形成呼应的瞬间。",
+    nextAssignment: "在同一个街角或室内窗口附近拍 30 分钟，只拍一个主体和一个背景关系；等待人物进入光线边界或与背景形状重合，成功标准是去掉主体后背景仍有结构，加入主体后关系更强。",
+    oneLineConclusion: "这是一张有观察意识但作品性还不够强的照片，下一步要把瞬间和边缘控制练得更狠。",
     suggestedTitles: ["静谧时光", "光影之间", "日常的诗意"],
     suggestedTags: ["生活", "光影", "日常", "街拍", "城市"],
     instagramCaption: "In the quiet moments, we find ourselves.",
+    instagramCaptions: ["A quiet pause in the frame.", "Held between light and routine.", "Nothing loud, just observed."],
     instagramHashtags: ["photography", "streetphotography", "lightandshadow", "urbanlife", "dailylife", "moments", "visualstorytelling"]
   }
 });
