@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { X, Download, CheckCircle } from 'lucide-react';
+import { X, Download, CheckCircle } from './ui/icons';
 import { DetailedScores, DetailedAnalysis } from '../types';
 
 // Detect mobile device once

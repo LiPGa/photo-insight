@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calendar } from 'lucide-react';
+import { Calendar } from '../ui/icons';
 import { PhotoEntry, DailyPrompt } from '../../types';
 import { LearningProgress } from './LearningProgress';
 import { PersonalizedTips } from './PersonalizedTips';

@@ -1,4 +1,4 @@
-import { AlertCircle, Lock, X } from 'lucide-react';
+import { AlertCircle, Lock, X } from './ui/icons';
 
 interface GuestSavePromptProps {
   isOpen: boolean;

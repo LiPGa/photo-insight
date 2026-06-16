@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Flame, Target, TrendingUp, Award } from 'lucide-react';
+import { Flame, Target, TrendingUp, Award } from '../ui/icons';
 import { PhotoEntry, DetailedScores } from '../../types';
 
 interface LearningProgressProps {
@@ -13,6 +13,9 @@ const SKILL_LABELS: Record<keyof DetailedScores, string> = {
   technical: '技术',
   expression: '表达',
   overall: '综合',
+  moment: '瞬间',
+  originality: '原创性',
+  competitionFit: '投稿适配',
   tilt: '水平',
   sharpness: '锐度'
 };

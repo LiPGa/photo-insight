@@ -8,9 +8,7 @@ import {
   ImageIcon,
   Sparkles,
   Check,
-  ChevronDown,
-  ChevronUp,
-} from 'lucide-react';
+} from '../ui/icons';
 import { ScoreMeter } from '../ui/ScoreMeter';
 import { ScoreCelebration } from '../ui/ScoreCelebration';
 import { DetailedScores, DetailedAnalysis } from '../../types';
@@ -22,6 +20,8 @@ const haptic = (type: 'light' | 'medium' | 'success' = 'light') => {
     navigator.vibrate(patterns[type]);
   }
 };
+
+const hasText = (value?: string) => !!value?.trim();
 
 interface ResultPanelProps {
   currentResult: { scores: DetailedScores; analysis: DetailedAnalysis } | null;
@@ -185,6 +185,23 @@ export const ResultPanel: React.FC<ResultPanelProps> = ({
                 <ScoreMeter score={currentResult.scores.expression} label="表达" color="#D40000" />
               </ScoreCelebration>
             </div>
+            {currentResult.scores.moment !== undefined && (
+              <ScoreCelebration score={currentResult.scores.moment} variant="subtle">
+                <ScoreMeter score={currentResult.scores.moment} label="瞬间" color="#D40000" />
+              </ScoreCelebration>
+            )}
+            {currentResult.scores.originality !== undefined && (
+              <ScoreCelebration score={currentResult.scores.originality} variant="subtle">
+                <ScoreMeter score={currentResult.scores.originality} label="原创性" color="#D40000" />
+              </ScoreCelebration>
+            )}
+            {currentResult.scores.competitionFit !== undefined && (
+              <div className="col-span-2">
+                <ScoreCelebration score={currentResult.scores.competitionFit} variant="subtle">
+                  <ScoreMeter score={currentResult.scores.competitionFit} label="投稿适配" color="#D40000" />
+                </ScoreCelebration>
+              </div>
+            )}
           </div>
 
           <div className="pt-10 border-t border-white/10">
@@ -211,6 +228,67 @@ export const ResultPanel: React.FC<ResultPanelProps> = ({
               </div>
             </div>
 
+            {((currentResult.analysis.strengths?.length || 0) > 0 || (currentResult.analysis.weaknesses?.length || 0) > 0) && (
+              <div className="grid gap-6 lg:grid-cols-2">
+                {(currentResult.analysis.strengths?.length || 0) > 0 && (
+                  <div className="space-y-4">
+                    <span className="mono text-xs text-zinc-500 font-bold tracking-[0.2em] uppercase">
+                      成立的地方
+                    </span>
+                    <ul className="space-y-3">
+                      {currentResult.analysis.strengths?.map((item, index) => (
+                        <li key={index} className="text-sm text-zinc-300 leading-relaxed border-l border-zinc-800 pl-4">
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {(currentResult.analysis.weaknesses?.length || 0) > 0 && (
+                  <div className="space-y-4">
+                    <span className="mono text-xs text-zinc-500 font-bold tracking-[0.2em] uppercase">
+                      主要问题
+                    </span>
+                    <ul className="space-y-3">
+                      {currentResult.analysis.weaknesses?.map((item, index) => (
+                        <li key={index} className="text-sm text-zinc-400 leading-relaxed border-l border-[#D40000]/40 pl-4">
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {currentResult.analysis.submissionAssessment && (
+              <div className="p-6 border border-white/10 bg-zinc-950 rounded-sm space-y-4">
+                <div className="flex items-center justify-between gap-4">
+                  <span className="mono text-xs text-zinc-500 font-bold tracking-[0.2em] uppercase">
+                    投稿判断
+                  </span>
+                  <span className="text-xs text-[#D40000] border border-[#D40000]/30 px-3 py-1 rounded-sm">
+                    {currentResult.analysis.submissionAssessment.verdict}
+                  </span>
+                </div>
+                <p className="text-sm text-zinc-300 leading-relaxed">
+                  {currentResult.analysis.submissionAssessment.reason}
+                </p>
+              </div>
+            )}
+
+            {hasText(currentResult.analysis.technicalReview) && (
+              <div className="space-y-4">
+                <span className="mono text-xs text-zinc-500 font-bold tracking-[0.2em] uppercase">
+                  技术与后期判断
+                </span>
+                <p className="text-sm text-zinc-400 leading-relaxed">
+                  {currentResult.analysis.technicalReview}
+                </p>
+              </div>
+            )}
+
             {/* Evolution Strategy */}
             <div className="p-8 bg-[#D40000]/10 border border-[#D40000]/20 rounded-sm space-y-4">
               <span className="mono text-sm text-[#D40000] font-bold tracking-[0.2em] block uppercase flex items-center gap-2">
@@ -230,6 +308,52 @@ export const ResultPanel: React.FC<ResultPanelProps> = ({
                 "{currentResult.analysis?.storyNote || ''}"
               </p>
             </div>
+
+            {(hasText(currentResult.analysis.cropAdvice) || hasText(currentResult.analysis.editingAdvice) || hasText(currentResult.analysis.reshootAdvice)) && (
+              <div className="grid gap-4">
+                {hasText(currentResult.analysis.cropAdvice) && (
+                  <div className="p-5 bg-zinc-950 border border-white/10 rounded-sm">
+                    <span className="mono text-[10px] text-zinc-600 font-bold tracking-[0.2em] uppercase block mb-3">
+                      Crop
+                    </span>
+                    <p className="text-sm text-zinc-300 leading-relaxed">{currentResult.analysis.cropAdvice}</p>
+                  </div>
+                )}
+                {hasText(currentResult.analysis.editingAdvice) && (
+                  <div className="p-5 bg-zinc-950 border border-white/10 rounded-sm">
+                    <span className="mono text-[10px] text-zinc-600 font-bold tracking-[0.2em] uppercase block mb-3">
+                      Edit
+                    </span>
+                    <p className="text-sm text-zinc-300 leading-relaxed">{currentResult.analysis.editingAdvice}</p>
+                  </div>
+                )}
+                {hasText(currentResult.analysis.reshootAdvice) && (
+                  <div className="p-5 bg-zinc-950 border border-white/10 rounded-sm">
+                    <span className="mono text-[10px] text-zinc-600 font-bold tracking-[0.2em] uppercase block mb-3">
+                      Reshoot
+                    </span>
+                    <p className="text-sm text-zinc-300 leading-relaxed">{currentResult.analysis.reshootAdvice}</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {hasText(currentResult.analysis.nextAssignment) && (
+              <div className="p-8 bg-white text-black rounded-sm space-y-4">
+                <span className="mono text-xs font-bold tracking-[0.2em] uppercase block">
+                  下次拍摄训练
+                </span>
+                <p className="text-base leading-relaxed">
+                  {currentResult.analysis.nextAssignment}
+                </p>
+              </div>
+            )}
+
+            {hasText(currentResult.analysis.oneLineConclusion) && (
+              <p className="text-sm text-zinc-400 italic leading-relaxed">
+                {currentResult.analysis.oneLineConclusion}
+              </p>
+            )}
           </div>
 
           {/* Action Buttons */}

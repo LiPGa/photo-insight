@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Camera, Lightbulb, Trash2 } from 'lucide-react';
+import { ArrowLeft, Camera, Lightbulb, Trash2 } from '../ui/icons';
 import { PhotoEntry } from '../../types';
 import { ScoreMeter } from '../ui/ScoreMeter';
 import { Histogram } from '../ui/Histogram';

@@ -1,5 +1,5 @@
 import React, { memo, useState, useEffect, useRef, useCallback, createContext, useContext } from 'react';
-import { ChevronRight, Star } from 'lucide-react';
+import { ChevronRight, Star } from '../ui/icons';
 import { PhotoEntry } from '../../types';
 import { getThumbnailUrl, isCloudinaryUrl } from '../../services/cloudinaryService';
 import { useThumbnail } from '../../hooks/useThumbnail';

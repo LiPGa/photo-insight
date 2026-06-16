@@ -4,10 +4,8 @@ export default {
     './index.html',
     './index.tsx',
     './App.tsx',
-    './components/**/*.{ts,tsx}',
-    './contexts/**/*.{ts,tsx}',
-    './hooks/**/*.{ts,tsx}',
-    './services/**/*.{ts,tsx}',
+    './components/**/*.ts',
+    './components/**/*.tsx',
   ],
   theme: {
     extend: {},

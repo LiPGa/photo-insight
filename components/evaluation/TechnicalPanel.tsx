@@ -1,5 +1,5 @@
 import React from 'react';
-import { Cpu, Instagram, Copy, Check } from 'lucide-react';
+import { Cpu, Instagram, Copy, Check } from '../ui/icons';
 import { Histogram } from '../ui/Histogram';
 import { EXIF_LABELS } from '../../constants';
 import { DetailedAnalysis } from '../../types';
@@ -20,6 +20,12 @@ interface TechnicalPanelProps {
   copied: boolean;
   onCopyInstagram: () => void;
 }
+
+const getInstagramCaptions = (analysis?: DetailedAnalysis) => {
+  if (analysis?.instagramCaptions?.length) return analysis.instagramCaptions;
+  if (analysis?.instagramCaption) return [analysis.instagramCaption];
+  return [];
+};
 
 export const TechnicalPanel: React.FC<TechnicalPanelProps> = ({
   currentExif,
@@ -79,9 +85,11 @@ export const TechnicalPanel: React.FC<TechnicalPanelProps> = ({
               </button>
             </div>
             <div className="space-y-3">
-              <p className="text-sm text-zinc-300 italic font-light leading-relaxed">
-                "{currentResult.analysis?.instagramCaption || ''}"
-              </p>
+              {getInstagramCaptions(currentResult.analysis).map((caption, index) => (
+                <p key={index} className="text-sm text-zinc-300 italic font-light leading-relaxed">
+                  "{caption}"
+                </p>
+              ))}
               <div className="flex flex-wrap gap-2 pt-1">
                 {currentResult.analysis?.instagramHashtags?.map((tag) => (
                   <span key={tag} className="text-xs text-[#D40000] mono font-medium">
