@@ -58,6 +58,7 @@ competitionFit：作为 LFI / LensCulture / 街头摄影比赛投稿的适配度
 overall：综合作品完成度。
 
 【输出要求】
+- 只输出一个合法 JSON object，不要 Markdown，不要代码块，不要额外解释。
 - 所有中文字段必须具体、克制、直接。
 - strengths 给 2-4 点，每一点必须对应画面中的具体元素。
 - weaknesses 给 2-5 点，直接指出削弱作品性的地方。
