@@ -1,6 +1,6 @@
 import { buildPhotoAnalysisPrompt, photoAnalysisResponseSchema } from "../../services/analysisContract";
 
-const DEFAULT_GEMINI_MODEL = "gemini-3.5-flash";
+const DEFAULT_GEMINI_MODEL = "gemini-3.1-flash-lite";
 
 export const onRequestPost = async (context: any) => {
   const { request, env } = context;

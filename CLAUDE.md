@@ -64,7 +64,7 @@ This is a React 19 + TypeScript photography progress tracking app ("PhotoInsight
 
 3. **Image Storage** (`services/cloudinaryService.ts`): Compressed images are uploaded to Cloudinary CDN, returning a persistent URL.
 
-4. **AI Analysis** (`services/geminiService.ts`): Photos are sent to Gemini API (`gemini-3.5-flash` model by default) for aesthetic evaluation. The service returns:
+4. **AI Analysis** (`services/geminiService.ts`): Photos are sent to Gemini API (`gemini-3.1-flash-lite` model by default) for aesthetic evaluation. The service returns:
    - Scores (composition, light, color, technical, expression, overall) on a **10-point scale**
    - Analysis (diagnosis, improvement suggestions, story interpretation)
    - Social media content (Instagram caption and hashtags)
