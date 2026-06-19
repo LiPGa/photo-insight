@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, AlertCircle, Loader2 } from '../ui/icons';
 import exifr from 'exifr';
-import { PhotoEntry, NavTab } from '../../types';
+import { PhotoEntry } from '../../types';
 import { MAX_FILE_SIZE } from '../../constants';
 import { useAuth } from '../../contexts/AuthContext';
 import { useDailyUsage } from '../../hooks/useDailyUsage';
@@ -14,6 +14,7 @@ import { UploadArea } from './UploadArea';
 import { AnalyzingOverlay } from './AnalyzingOverlay';
 import { TechnicalPanel } from './TechnicalPanel';
 import { ResultPanel } from './ResultPanel';
+import { ReviewRail } from './ReviewRail';
 import { ShareCardModal } from '../ShareCardModal';
 import { GuestSavePrompt } from '../GuestSavePrompt';
 
@@ -334,10 +335,10 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
   const displayUrl = previewUrl || currentUpload;
 
   return (
-    <div className="flex flex-col lg:flex-row min-h-screen relative">
+    <div className={`flex flex-col lg:flex-row min-h-screen relative bg-black ${currentResult ? 'lg:h-screen lg:overflow-hidden' : ''}`}>
       {/* Left Area: Display & Technical */}
-      <div className={`flex flex-col bg-[#050505] transition-all duration-1000 ease-in-out ${currentResult ? 'lg:flex-grow-0 lg:w-[50%]' : 'flex-grow'}`}>
-        <div className={`flex-grow flex flex-col items-center justify-center relative overflow-hidden min-h-[50vh] ${displayUrl ? 'p-0 sm:p-2' : 'p-6 sm:p-10'}`}>
+      <div className={`flex flex-col bg-[#050505] transition-all duration-1000 ease-in-out ${currentResult ? 'lg:h-screen lg:flex-grow-0 lg:w-[50%] lg:overflow-y-auto' : 'flex-grow'}`}>
+        <div className={`relative overflow-hidden ${currentResult ? 'flex-none px-4 pt-20 pb-5 sm:px-6 lg:px-8 lg:pt-20 lg:pb-6' : `flex-grow flex flex-col items-center justify-center min-h-[50vh] ${displayUrl ? 'p-0 sm:p-2' : 'p-6 sm:p-10'}`}`}>
           {/* Error Alert */}
           {(error || uploadError) && (
             <div className="absolute top-10 z-30 flex items-center gap-2 bg-[#D40000] text-white px-4 py-2 rounded-sm mono text-[10px] animate-in slide-in-from-top-4">
@@ -373,8 +374,8 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
           )}
 
           {displayUrl ? (
-            <div className={`relative w-full h-full flex flex-col items-center justify-center transition-all duration-1000 ${currentResult ? 'opacity-100' : 'scale-100'}`}>
-              <div className="relative group w-full h-full flex items-center justify-center p-4">
+            <div className={`relative w-full flex flex-col items-center transition-all duration-1000 ${currentResult ? 'opacity-100' : 'h-full justify-center scale-100'}`}>
+              <div className={`relative group w-full flex items-center justify-center ${currentResult ? 'p-0' : 'h-full p-4'}`}>
                 {(isAnalyzing || isUploading) && (
                   <AnalyzingOverlay
                     thinkingState={isUploading ? { main: '正在上传图片...', sub: '上传到云存储中' } : thinkingState}
@@ -384,7 +385,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
                 )}
                 <img
                   src={displayUrl}
-                  className="max-w-full max-h-[55vh] sm:max-h-[75vh] object-contain shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/5 bg-zinc-900/50"
+                  className={`max-w-full object-contain shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/5 bg-zinc-900/50 ${currentResult ? 'max-h-[58vh] sm:max-h-[62vh] lg:max-h-[calc(100vh-360px)]' : 'max-h-[55vh] sm:max-h-[75vh]'}`}
                   alt="Preview"
                 />
                 {!isAnalyzing && !isUploading && (
@@ -412,7 +413,15 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
         </div>
 
         {/* Technical Panel - Only show when image is uploaded */}
-        {currentUpload && (
+        {currentUpload && currentResult ? (
+          <ReviewRail
+            currentExif={currentExif}
+            currentResult={currentResult}
+            selectedTitle={selectedTitle}
+            copied={copied}
+            onCopyInstagram={handleCopyInstagram}
+          />
+        ) : currentUpload ? (
           <TechnicalPanel
             currentExif={currentExif}
             currentUpload={currentUpload}
@@ -420,7 +429,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
             copied={copied}
             onCopyInstagram={handleCopyInstagram}
           />
-        )}
+        ) : null}
       </div>
 
       {/* Right Panel: Analysis Result */}

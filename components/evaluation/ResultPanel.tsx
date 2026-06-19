@@ -58,15 +58,43 @@ export const ResultPanel: React.FC<ResultPanelProps> = ({
   onSaveClick,
   onShowAuthModal,
 }) => {
+  const verdict = currentResult?.analysis.submissionAssessment?.verdict;
+  const overallScore = currentResult?.scores.overall;
+
   return (
-  <div className={`transition-all duration-1000 ease-in-out border-l border-white/10 overflow-y-auto bg-black shadow-[0_0_100px_rgba(0,0,0,1)] z-10 ${currentResult ? 'lg:w-[50%] w-full' : 'lg:w-[500px] w-full'}`}>
-    <div className="p-8 sm:p-12 lg:p-16 space-y-16">
-      <header className="space-y-4">
+  <div className={`transition-all duration-1000 ease-in-out border-t border-white/10 overflow-y-auto bg-black shadow-[0_0_100px_rgba(0,0,0,1)] z-10 lg:border-l lg:border-t-0 ${currentResult ? 'lg:h-screen lg:w-[50%] w-full' : 'lg:w-[500px] w-full'}`}>
+    <div className={`${currentResult ? 'space-y-10 p-6 sm:p-8 lg:p-12' : 'space-y-16 p-8 sm:p-12 lg:p-16'}`}>
+      <header className={currentResult ? 'space-y-5 border-b border-white/10 pb-7' : 'space-y-4'}>
         <div className="flex items-center gap-3">
           <div className="w-2 h-2 bg-[#D40000] rounded-full"></div>
-          <span className="mono text-xs font-bold tracking-widest text-zinc-500">AI_POWERED</span>
+          <span className="mono text-xs font-bold tracking-widest text-zinc-500">
+            {currentResult ? 'AI_REVIEW' : 'AI_POWERED'}
+          </span>
         </div>
-        <h2 className="text-5xl font-black tracking-tight leading-none">知影 Photo Insight</h2>
+        {currentResult ? (
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+            <div className="min-w-0 space-y-2">
+              <h2 className="text-2xl font-black leading-tight tracking-tight text-zinc-100 sm:text-3xl">
+                {selectedTitle || currentResult.analysis.suggestedTitles?.[0] || '评片结果'}
+              </h2>
+              {verdict && (
+                <div className="inline-flex max-w-full border border-[#D40000]/30 px-3 py-1 text-xs text-[#D40000]">
+                  <span className="truncate">{verdict}</span>
+                </div>
+              )}
+            </div>
+            <div className="shrink-0 sm:text-right">
+              <div className="mono text-[10px] font-bold uppercase tracking-[0.22em] text-zinc-600">
+                Overall
+              </div>
+              <div className="mono text-4xl font-black leading-none text-[#D40000]">
+                {typeof overallScore === 'number' ? overallScore.toFixed(1) : '--'}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <h2 className="text-5xl font-black tracking-tight leading-none">知影 Photo Insight</h2>
+        )}
       </header>
 
       {!currentResult ? (
@@ -123,10 +151,10 @@ export const ResultPanel: React.FC<ResultPanelProps> = ({
           )}
         </div>
       ) : (
-        <div className="space-y-20 animate-in slide-in-from-right-12 duration-1000">
+        <div className="space-y-12 animate-in slide-in-from-right-12 duration-1000">
           
           {/* Titles */}
-          <div className="space-y-12">
+          <div className="space-y-8">
             <div className="space-y-6">
               <div className="flex items-center gap-3 text-[#D40000] mono text-xs font-bold uppercase tracking-widest">
                 <TypeIcon size={18} /> Suggested_Titles
@@ -167,7 +195,7 @@ export const ResultPanel: React.FC<ResultPanelProps> = ({
           </div>
 
           {/* Scores */}
-          <div className="grid grid-cols-2 gap-x-12 gap-y-16">
+          <div className="grid grid-cols-1 gap-x-10 gap-y-10 sm:grid-cols-2">
             <ScoreCelebration score={currentResult.scores.composition} variant="subtle">
               <ScoreMeter score={currentResult.scores.composition} label="构图" color="#D40000" />
             </ScoreCelebration>
@@ -180,7 +208,7 @@ export const ResultPanel: React.FC<ResultPanelProps> = ({
             <ScoreCelebration score={currentResult.scores.technical} variant="subtle">
               <ScoreMeter score={currentResult.scores.technical} label="技术" color="#D40000" />
             </ScoreCelebration>
-            <div className="col-span-2">
+            <div className="sm:col-span-2">
               <ScoreCelebration score={currentResult.scores.expression} variant="subtle">
                 <ScoreMeter score={currentResult.scores.expression} label="表达" color="#D40000" />
               </ScoreCelebration>
@@ -196,7 +224,7 @@ export const ResultPanel: React.FC<ResultPanelProps> = ({
               </ScoreCelebration>
             )}
             {currentResult.scores.competitionFit !== undefined && (
-              <div className="col-span-2">
+              <div className="sm:col-span-2">
                 <ScoreCelebration score={currentResult.scores.competitionFit} variant="subtle">
                   <ScoreMeter score={currentResult.scores.competitionFit} label="投稿适配" color="#D40000" />
                 </ScoreCelebration>
@@ -204,14 +232,14 @@ export const ResultPanel: React.FC<ResultPanelProps> = ({
             )}
           </div>
 
-          <div className="pt-10 border-t border-white/10">
+          <div className="pt-8 border-t border-white/10">
             <ScoreCelebration score={currentResult.scores.overall} variant="full">
               <ScoreMeter score={currentResult.scores.overall} label="综合评分" color="#fff" />
             </ScoreCelebration>
           </div>
 
           {/* Analysis */}
-          <div className="space-y-16 pt-10 border-t border-white/10">
+          <div className="space-y-10 pt-8 border-t border-white/10">
             <div className="space-y-6">
               <div className="flex items-center gap-3 text-[#D40000] mono text-xs font-bold uppercase tracking-widest">
                 <MessageSquare size={18} /> 专业诊断
@@ -290,11 +318,11 @@ export const ResultPanel: React.FC<ResultPanelProps> = ({
             )}
 
             {/* Evolution Strategy */}
-            <div className="p-8 bg-[#D40000]/10 border border-[#D40000]/20 rounded-sm space-y-4">
+            <div className="p-6 sm:p-7 bg-[#D40000]/10 border border-[#D40000]/20 rounded-sm space-y-4">
               <span className="mono text-sm text-[#D40000] font-bold tracking-[0.2em] block uppercase flex items-center gap-2">
                 <Lightbulb size={16} /> 进化策略
               </span>
-              <p className="text-lg text-zinc-100 leading-relaxed">
+              <p className="text-base sm:text-lg text-zinc-100 leading-relaxed">
                 {currentResult.analysis?.improvement || ''}
               </p>
             </div>
@@ -339,7 +367,7 @@ export const ResultPanel: React.FC<ResultPanelProps> = ({
             )}
 
             {hasText(currentResult.analysis.nextAssignment) && (
-              <div className="p-8 bg-white text-black rounded-sm space-y-4">
+              <div className="p-6 sm:p-8 bg-white text-black rounded-sm space-y-4">
                 <span className="mono text-xs font-bold tracking-[0.2em] uppercase block">
                   下次拍摄训练
                 </span>
