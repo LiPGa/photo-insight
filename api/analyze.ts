@@ -4,6 +4,7 @@ export const config = {
 
 const IMAGE_FETCH_TIMEOUT_MS = 15000;
 const GEMINI_FETCH_TIMEOUT_MS = 50000;
+const DEFAULT_GEMINI_MODEL = 'gemini-3.5-flash';
 const SUBMISSION_VERDICTS = [
   '不建议投稿',
   '适合 Instagram / 小红书，但不适合比赛',
@@ -230,7 +231,8 @@ export default async function handler(req: any, res: any) {
 
     const prompt = buildPhotoAnalysisPrompt(technicalContext);
 
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    const geminiModel = process.env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL;
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(geminiModel)}:generateContent?key=${apiKey}`;
     let geminiRes = await fetchWithTimeout(geminiUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
