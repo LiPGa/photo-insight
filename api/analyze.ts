@@ -4,7 +4,7 @@ export const config = {
 
 const IMAGE_FETCH_TIMEOUT_MS = 15000;
 const GEMINI_FETCH_TIMEOUT_MS = 50000;
-const DEFAULT_GEMINI_MODEL = 'gemini-3.5-flash';
+const DEFAULT_GEMINI_MODEL = 'gemini-3.1-flash-lite';
 const SUBMISSION_VERDICTS = [
   '不建议投稿',
   '适合 Instagram / 小红书，但不适合比赛',

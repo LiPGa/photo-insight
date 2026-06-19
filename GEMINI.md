@@ -11,7 +11,7 @@ The application allows users to upload photos, receive an AI-powered analysis of
 ### Core Technologies
 
 *   **Frontend:** React 19, TypeScript, Vite
-*   **AI:** Google Gemini API (`gemini-3.5-flash` model by default)
+*   **AI:** Google Gemini API (`gemini-3.1-flash-lite` model by default)
 *   **Styling:** Tailwind CSS (via CDN)
 *   **Authentication:** Supabase (Email/Password + Google OAuth)
 *   **Database:** Supabase (PostgreSQL)
@@ -56,7 +56,7 @@ Set environment variables in a `.env.local` file in the project root:
 GEMINI_API_KEY=your_api_key_here
 
 # Gemini model override (Optional)
-GEMINI_MODEL=gemini-3.5-flash
+GEMINI_MODEL=gemini-3.1-flash-lite
 
 # Mock Mode - Skips the API call and returns mock data for local testing (Optional)
 VITE_MOCK_API=true
