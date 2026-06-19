@@ -1,5 +1,7 @@
 import { buildPhotoAnalysisPrompt, photoAnalysisResponseSchema } from "../../services/analysisContract";
 
+const DEFAULT_GEMINI_MODEL = "gemini-3.5-flash";
+
 export const onRequestPost = async (context: any) => {
   const { request, env } = context;
 
@@ -46,7 +48,8 @@ export const onRequestPost = async (context: any) => {
     const prompt = buildPhotoAnalysisPrompt(technicalContext);
 
     // Direct REST API call to Gemini (Zero dependencies for Edge)
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    const geminiModel = env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL;
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(geminiModel)}:generateContent?key=${apiKey}`;
     
     const geminiRes = await fetch(geminiUrl, {
       method: 'POST',
